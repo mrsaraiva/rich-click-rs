@@ -67,6 +67,8 @@ impl RichHelpRenderer {
                     &arg_records,
                     self.config.style_argument,
                     self.config.style_helptext,
+                    &self.config.panel_arguments,
+                    &self.config.table_arguments,
                 )?;
             }
         }
@@ -89,6 +91,8 @@ impl RichHelpRenderer {
                 &opt_records,
                 self.config.style_option,
                 self.config.style_option_help,
+                &self.config.panel_options,
+                &self.config.table_options,
             )?;
         }
 
@@ -160,6 +164,8 @@ impl RichHelpRenderer {
                     &commands,
                     self.config.style_command,
                     self.config.style_command_help,
+                    &self.config.panel_commands,
+                    &self.config.table_commands,
                 )?;
             }
         }
@@ -172,6 +178,8 @@ impl RichHelpRenderer {
                 &arguments,
                 self.config.style_argument,
                 self.config.style_helptext,
+                &self.config.panel_arguments,
+                &self.config.table_arguments,
             )?;
         }
 
@@ -183,6 +191,8 @@ impl RichHelpRenderer {
                 &options,
                 self.config.style_option,
                 self.config.style_option_help,
+                &self.config.panel_options,
+                &self.config.table_options,
             )?;
         }
 
@@ -195,6 +205,8 @@ impl RichHelpRenderer {
                     &commands,
                     self.config.style_command,
                     self.config.style_command_help,
+                    &self.config.panel_commands,
+                    &self.config.table_commands,
                 )?;
             }
         }
@@ -267,27 +279,35 @@ impl RichHelpRenderer {
         records: &[(String, String)],
         key_style: Style,
         value_style: Style,
+        panel_cfg: &crate::config::PanelConfig,
+        table_cfg: &crate::config::TableConfig,
     ) -> io::Result<()> {
-        let table = self.build_table(records, key_style, value_style);
-        let panel = self.build_panel(title, table);
+        let table = self.build_table(records, key_style, value_style, table_cfg);
+        let panel = self.build_panel(title, table, panel_cfg);
         console.print(&panel, None, None, None, false, "\n")
     }
 
-    fn build_table(&self, records: &[(String, String)], key_style: Style, value_style: Style) -> Table {
+    fn build_table(
+        &self,
+        records: &[(String, String)],
+        key_style: Style,
+        value_style: Style,
+        table_cfg: &crate::config::TableConfig,
+    ) -> Table {
         let mut table = Table::grid()
-            .with_padding(self.config.table.padding.0, self.config.table.padding.1)
-            .with_pad_edge(self.config.table.pad_edge)
-            .with_show_lines(self.config.table.show_lines)
-            .with_leading(self.config.table.leading)
-            .with_expand(self.config.table.expand)
-            .with_border_style(self.config.table.border_style);
+            .with_padding(table_cfg.padding.0, table_cfg.padding.1)
+            .with_pad_edge(table_cfg.pad_edge)
+            .with_show_lines(table_cfg.show_lines)
+            .with_leading(table_cfg.leading)
+            .with_expand(table_cfg.expand)
+            .with_border_style(table_cfg.border_style);
 
-        if let Some(box_type) = self.config.table.box_type {
+        if let Some(box_type) = table_cfg.box_type {
             table = table.with_box(Some(box_type));
         }
 
-        if !self.config.table.row_styles.is_empty() {
-            table = table.with_row_styles(self.config.table.row_styles.clone());
+        if !table_cfg.row_styles.is_empty() {
+            table = table.with_row_styles(table_cfg.row_styles.clone());
         }
 
         let mut key_column = Column::default();
@@ -314,16 +334,16 @@ impl RichHelpRenderer {
         table
     }
 
-    fn build_panel(&self, title: &str, table: Table) -> Panel {
-        let title_text = Text::styled(title, self.config.panel.title_style);
+    fn build_panel(&self, title: &str, table: Table, panel_cfg: &crate::config::PanelConfig) -> Panel {
+        let title_text = Text::styled(title, panel_cfg.title_style);
         Panel::new(Box::new(table))
-            .with_box(self.config.panel.box_type)
+            .with_box(panel_cfg.box_type)
             .with_title_text(title_text)
-            .with_title_align(self.config.panel.align)
-            .with_border_style(self.config.panel.border_style)
-            .with_style(self.config.panel.panel_style)
-            .with_padding(self.config.panel.padding)
-            .with_expand(self.config.panel.expand)
+            .with_title_align(panel_cfg.align)
+            .with_border_style(panel_cfg.border_style)
+            .with_style(panel_cfg.panel_style)
+            .with_padding(panel_cfg.padding)
+            .with_expand(panel_cfg.expand)
     }
 
     fn create_capture_console(&self) -> Console<Vec<u8>> {

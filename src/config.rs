@@ -1,6 +1,10 @@
 use std::sync::OnceLock;
 
-use rich_rs::r#box::ROUNDED;
+use rich_rs::r#box::{
+    ASCII, ASCII2, ASCII_DOUBLE_HEAD, DOUBLE, DOUBLE_EDGE, HEAVY, HEAVY_EDGE, HEAVY_HEAD,
+    HORIZONTALS, MARKDOWN, MINIMAL, MINIMAL_DOUBLE_HEAD, MINIMAL_HEAVY_HEAD, ROUNDED, SIMPLE,
+    SIMPLE_HEAD, SIMPLE_HEAVY, SQUARE, SQUARE_DOUBLE_HEAD,
+};
 use rich_rs::{AlignMethod, ColorSystem, PaddingDimensions, Style};
 
 use crate::theme::{apply_theme, ThemeError};
@@ -222,8 +226,12 @@ pub struct RichHelpConfig {
     pub use_click_short_help: bool,
     pub helptext_show_aliases: bool,
 
-    pub panel: PanelConfig,
-    pub table: TableConfig,
+    pub panel_options: PanelConfig,
+    pub panel_commands: PanelConfig,
+    pub panel_arguments: PanelConfig,
+    pub table_options: TableConfig,
+    pub table_commands: TableConfig,
+    pub table_arguments: TableConfig,
 }
 
 impl Default for RichHelpConfig {
@@ -364,8 +372,12 @@ impl Default for RichHelpConfig {
             text_emojis: None,
             use_click_short_help: false,
             helptext_show_aliases: true,
-            panel: PanelConfig::default(),
-            table: TableConfig::default(),
+            panel_options: PanelConfig::default(),
+            panel_commands: PanelConfig::default(),
+            panel_arguments: PanelConfig::default(),
+            table_options: TableConfig::default(),
+            table_commands: TableConfig::default(),
+            table_arguments: TableConfig::default(),
         };
 
         let _ = cfg.apply_theme_name("default-box");
@@ -432,6 +444,8 @@ impl RichHelpConfig {
         match key {
             "width" => self.width = value.as_u64().map(|v| v as usize),
             "max_width" => self.max_width = value.as_u64().map(|v| v as usize),
+            "color_system" => if let Some(mode) = parse_color_system_mode(value) { self.color_system = mode; },
+            "force_terminal" => self.force_terminal = value.as_bool(),
             "panel_title_string" => if let Some(v) = value.as_str() { self.panel_title_string = v.to_string(); },
             "deprecated_string" => if let Some(v) = value.as_str() { self.deprecated_string = v.to_string(); },
             "deprecated_with_reason_string" => if let Some(v) = value.as_str() { self.deprecated_with_reason_string = v.to_string(); },
@@ -447,40 +461,143 @@ impl RichHelpConfig {
             "options_panel_title" => if let Some(v) = value.as_str() { self.options_panel_title = v.to_string(); },
             "commands_panel_title" => if let Some(v) = value.as_str() { self.commands_panel_title = v.to_string(); },
             "arguments_panel_title" => if let Some(v) = value.as_str() { self.arguments_panel_title = v.to_string(); },
+            "errors_panel_title" => if let Some(v) = value.as_str() { self.errors_panel_title = v.to_string(); },
+            "aborted_text" => if let Some(v) = value.as_str() { self.aborted_text = v.to_string(); },
             "style_option" => if let Some(v) = value.as_str() { self.style_option = parse_style(v); },
+            "style_option_negative" => self.style_option_negative = parse_optional_style(value),
             "style_argument" => if let Some(v) = value.as_str() { self.style_argument = parse_style(v); },
             "style_command" => if let Some(v) = value.as_str() { self.style_command = parse_style(v); },
+            "style_command_aliases" => if let Some(v) = value.as_str() { self.style_command_aliases = parse_style(v); },
+            "style_switch" => if let Some(v) = value.as_str() { self.style_switch = parse_style(v); },
+            "style_switch_negative" => self.style_switch_negative = parse_optional_style(value),
             "style_metavar" => if let Some(v) = value.as_str() { self.style_metavar = parse_style(v); },
+            "style_metavar_append" => if let Some(v) = value.as_str() { self.style_metavar_append = parse_style(v); },
+            "style_metavar_separator" => if let Some(v) = value.as_str() { self.style_metavar_separator = parse_style(v); },
+            "style_range_append" => self.style_range_append = parse_optional_style(value),
+            "style_header_text" => if let Some(v) = value.as_str() { self.style_header_text = parse_style(v); },
+            "style_epilog_text" => if let Some(v) = value.as_str() { self.style_epilog_text = parse_style(v); },
+            "style_footer_text" => if let Some(v) = value.as_str() { self.style_footer_text = parse_style(v); },
             "style_usage" => if let Some(v) = value.as_str() { self.style_usage = parse_style(v); },
+            "style_usage_command" => if let Some(v) = value.as_str() { self.style_usage_command = parse_style(v); },
+            "style_usage_separator" => if let Some(v) = value.as_str() { self.style_usage_separator = parse_style(v); },
             "style_deprecated" => if let Some(v) = value.as_str() { self.style_deprecated = parse_style(v); },
+            "style_helptext_first_line" => if let Some(v) = value.as_str() { self.style_helptext_first_line = parse_style(v); },
             "style_helptext" => if let Some(v) = value.as_str() { self.style_helptext = parse_style(v); },
+            "style_helptext_aliases" => self.style_helptext_aliases = parse_optional_style(value),
             "style_option_help" => if let Some(v) = value.as_str() { self.style_option_help = parse_style(v); },
             "style_command_help" => if let Some(v) = value.as_str() { self.style_command_help = parse_style(v); },
+            "style_option_default" => if let Some(v) = value.as_str() { self.style_option_default = parse_style(v); },
+            "style_option_envvar" => if let Some(v) = value.as_str() { self.style_option_envvar = parse_style(v); },
+            "style_required_short" => if let Some(v) = value.as_str() { self.style_required_short = parse_style(v); },
+            "style_required_long" => if let Some(v) = value.as_str() { self.style_required_long = parse_style(v); },
             "style_options_panel_border" => if let Some(v) = value.as_str() { self.style_options_panel_border = parse_style(v); },
             "style_commands_panel_border" => if let Some(v) = value.as_str() { self.style_commands_panel_border = parse_style(v); },
+            "style_errors_panel_border" => if let Some(v) = value.as_str() { self.style_errors_panel_border = parse_style(v); },
+            "style_options_panel_box" => self.style_options_panel_box = parse_box_value(value),
+            "style_commands_panel_box" => self.style_commands_panel_box = parse_box_value(value),
+            "style_errors_panel_box" => self.style_errors_panel_box = parse_box_value(value),
+            "style_options_panel_help_style" => if let Some(v) = value.as_str() { self.style_options_panel_help_style = parse_style(v); },
+            "style_commands_panel_help_style" => if let Some(v) = value.as_str() { self.style_commands_panel_help_style = parse_style(v); },
+            "style_options_panel_title_style" => if let Some(v) = value.as_str() { self.style_options_panel_title_style = parse_style(v); },
+            "style_commands_panel_title_style" => if let Some(v) = value.as_str() { self.style_commands_panel_title_style = parse_style(v); },
+            "style_options_panel_style" => if let Some(v) = value.as_str() { self.style_options_panel_style = parse_style(v); },
+            "style_commands_panel_style" => if let Some(v) = value.as_str() { self.style_commands_panel_style = parse_style(v); },
+            "style_padding_usage" => if let Some(v) = value.as_str() { self.style_padding_usage = parse_style(v); },
+            "style_padding_helptext" => if let Some(v) = value.as_str() { self.style_padding_helptext = parse_style(v); },
+            "style_padding_epilog" => if let Some(v) = value.as_str() { self.style_padding_epilog = parse_style(v); },
+            "style_padding_errors" => if let Some(v) = value.as_str() { self.style_padding_errors = parse_style(v); },
+            "style_aborted" => if let Some(v) = value.as_str() { self.style_aborted = parse_style(v); },
             "style_options_table_border_style" => if let Some(v) = value.as_str() { self.style_options_table_border_style = parse_style(v); },
             "style_commands_table_border_style" => if let Some(v) = value.as_str() { self.style_commands_table_border_style = parse_style(v); },
+            "style_options_table_show_lines" => if let Some(v) = value.as_bool() { self.style_options_table_show_lines = v; },
+            "style_commands_table_show_lines" => if let Some(v) = value.as_bool() { self.style_commands_table_show_lines = v; },
+            "style_options_table_leading" => if let Some(v) = value.as_u64() { self.style_options_table_leading = v as usize; },
+            "style_commands_table_leading" => if let Some(v) = value.as_u64() { self.style_commands_table_leading = v as usize; },
+            "style_options_table_pad_edge" => if let Some(v) = value.as_bool() { self.style_options_table_pad_edge = v; },
+            "style_commands_table_pad_edge" => if let Some(v) = value.as_bool() { self.style_commands_table_pad_edge = v; },
+            "style_options_table_expand" => if let Some(v) = value.as_bool() { self.style_options_table_expand = v; },
+            "style_commands_table_expand" => if let Some(v) = value.as_bool() { self.style_commands_table_expand = v; },
+            "style_options_table_box" => self.style_options_table_box = parse_box_value(value),
+            "style_commands_table_box" => self.style_commands_table_box = parse_box_value(value),
+            "style_options_table_row_styles" => if let Some(v) = parse_style_list(value) { self.style_options_table_row_styles = v; },
+            "style_commands_table_row_styles" => if let Some(v) = parse_style_list(value) { self.style_commands_table_row_styles = v; },
+            "style_options_panel_padding" => if let Some(v) = parse_padding_value(value) { self.style_options_panel_padding = v; },
+            "style_commands_panel_padding" => if let Some(v) = parse_padding_value(value) { self.style_commands_panel_padding = v; },
+            "style_options_table_padding" => if let Some(v) = parse_padding_value(value) { self.style_options_table_padding = v; },
+            "style_commands_table_padding" => if let Some(v) = parse_padding_value(value) { self.style_commands_table_padding = v; },
+            "panel_title_padding" => if let Some(v) = value.as_u64() { self.panel_title_padding = v as usize; },
+            "align_options_panel" => if let Some(v) = parse_align(value) { self.align_options_panel = v; },
+            "align_commands_panel" => if let Some(v) = parse_align(value) { self.align_commands_panel = v; },
+            "align_errors_panel" => if let Some(v) = parse_align(value) { self.align_errors_panel = v; },
+            "panel_inline_help_in_title" => if let Some(v) = value.as_bool() { self.panel_inline_help_in_title = v; },
+            "panel_inline_help_delimiter" => if let Some(v) = value.as_str() { self.panel_inline_help_delimiter = v.to_string(); },
+            "options_table_column_types" => if let Some(v) = parse_string_list(value) { self.options_table_column_types = v; },
+            "commands_table_column_types" => if let Some(v) = parse_string_list(value) { self.commands_table_column_types = v; },
+            "options_table_help_sections" => if let Some(v) = parse_string_list(value) { self.options_table_help_sections = v; },
+            "commands_table_help_sections" => if let Some(v) = parse_string_list(value) { self.commands_table_help_sections = v; },
+            "show_arguments" => self.show_arguments = value.as_bool(),
+            "show_commands" => self.show_commands = value.as_bool(),
+            "show_metavars_column" => self.show_metavars_column = value.as_bool(),
+            "commands_before_options" => if let Some(v) = value.as_bool() { self.commands_before_options = v; },
+            "default_panels_first" => if let Some(v) = value.as_bool() { self.default_panels_first = v; },
+            "append_metavars_help" => self.append_metavars_help = value.as_bool(),
+            "group_arguments_options" => if let Some(v) = value.as_bool() { self.group_arguments_options = v; },
+            "option_envvar_first" => self.option_envvar_first = value.as_bool(),
+            "text_emojis" => self.text_emojis = value.as_bool(),
+            "use_click_short_help" => if let Some(v) = value.as_bool() { self.use_click_short_help = v; },
+            "helptext_show_aliases" => if let Some(v) = value.as_bool() { self.helptext_show_aliases = v; },
+            "padding_header_text" => if let Some(v) = parse_padding_value(value) { self.padding_header_text = v; },
+            "padding_usage" => if let Some(v) = parse_padding_value(value) { self.padding_usage = v; },
+            "padding_helptext" => if let Some(v) = parse_padding_value(value) { self.padding_helptext = v; },
+            "padding_helptext_deprecated" => if let Some(v) = parse_padding_value(value) { self.padding_helptext_deprecated = v; },
+            "padding_helptext_first_line" => if let Some(v) = parse_padding_value(value) { self.padding_helptext_first_line = v; },
+            "padding_epilog" => if let Some(v) = parse_padding_value(value) { self.padding_epilog = v; },
+            "padding_footer_text" => if let Some(v) = parse_padding_value(value) { self.padding_footer_text = v; },
+            "padding_errors_panel" => if let Some(v) = parse_padding_value(value) { self.padding_errors_panel = v; },
+            "padding_errors_suggestion" => if let Some(v) = parse_padding_value(value) { self.padding_errors_suggestion = v; },
+            "padding_errors_epilogue" => if let Some(v) = parse_padding_value(value) { self.padding_errors_epilogue = v; },
             _ => {}
         }
     }
 
     fn sync_render_config(&mut self) {
-        self.panel.box_type = self.style_options_panel_box.unwrap_or(ROUNDED);
-        self.panel.border_style = self.style_options_panel_border;
-        self.panel.title_style = self.style_options_panel_title_style;
-        self.panel.panel_style = self.style_options_panel_style;
-        self.panel.padding = self.style_options_panel_padding;
-        self.panel.align = self.align_options_panel;
-        self.panel.expand = true;
+        self.panel_options.box_type = self.style_options_panel_box.unwrap_or(ROUNDED);
+        self.panel_options.border_style = self.style_options_panel_border;
+        self.panel_options.title_style = self.style_options_panel_title_style;
+        self.panel_options.panel_style = self.style_options_panel_style;
+        self.panel_options.padding = self.style_options_panel_padding;
+        self.panel_options.align = self.align_options_panel;
+        self.panel_options.expand = true;
+
+        self.panel_commands.box_type = self.style_commands_panel_box.unwrap_or(ROUNDED);
+        self.panel_commands.border_style = self.style_commands_panel_border;
+        self.panel_commands.title_style = self.style_commands_panel_title_style;
+        self.panel_commands.panel_style = self.style_commands_panel_style;
+        self.panel_commands.padding = self.style_commands_panel_padding;
+        self.panel_commands.align = self.align_commands_panel;
+        self.panel_commands.expand = true;
+
+        self.panel_arguments = self.panel_options.clone();
 
         let padding = self.style_options_table_padding.unpack();
-        self.table.show_lines = self.style_options_table_show_lines;
-        self.table.leading = self.style_options_table_leading;
-        self.table.pad_edge = self.style_options_table_pad_edge;
-        self.table.padding = (padding.3, padding.1);
-        self.table.expand = self.style_options_table_expand;
-        self.table.box_type = self.style_options_table_box;
-        self.table.border_style = self.style_options_table_border_style;
+        self.table_options.show_lines = self.style_options_table_show_lines;
+        self.table_options.leading = self.style_options_table_leading;
+        self.table_options.pad_edge = self.style_options_table_pad_edge;
+        self.table_options.padding = (padding.3, padding.1);
+        self.table_options.expand = self.style_options_table_expand;
+        self.table_options.box_type = self.style_options_table_box;
+        self.table_options.border_style = self.style_options_table_border_style;
+
+        let padding = self.style_commands_table_padding.unpack();
+        self.table_commands.show_lines = self.style_commands_table_show_lines;
+        self.table_commands.leading = self.style_commands_table_leading;
+        self.table_commands.pad_edge = self.style_commands_table_pad_edge;
+        self.table_commands.padding = (padding.3, padding.1);
+        self.table_commands.expand = self.style_commands_table_expand;
+        self.table_commands.box_type = self.style_commands_table_box;
+        self.table_commands.border_style = self.style_commands_table_border_style;
+
+        self.table_arguments = self.table_options.clone();
     }
 }
 
@@ -534,4 +651,110 @@ impl RichHelpConfigBuilder {
 
 fn parse_style(input: &str) -> Style {
     Style::parse(input).unwrap_or_default()
+}
+
+fn parse_optional_style(value: &serde_json::Value) -> Option<Style> {
+    if value.is_null() {
+        return None;
+    }
+    value.as_str().map(parse_style)
+}
+
+fn parse_style_list(value: &serde_json::Value) -> Option<Vec<Style>> {
+    let list = value.as_array()?;
+    let mut styles = Vec::with_capacity(list.len());
+    for item in list {
+        if let Some(s) = item.as_str() {
+            styles.push(parse_style(s));
+        }
+    }
+    Some(styles)
+}
+
+fn parse_string_list(value: &serde_json::Value) -> Option<Vec<String>> {
+    let list = value.as_array()?;
+    let mut out = Vec::with_capacity(list.len());
+    for item in list {
+        if let Some(s) = item.as_str() {
+            out.push(s.to_string());
+        }
+    }
+    Some(out)
+}
+
+fn parse_padding_value(value: &serde_json::Value) -> Option<PaddingDimensions> {
+    if let Some(v) = value.as_u64() {
+        return Some(PaddingDimensions::from(v as usize));
+    }
+    let list = value.as_array()?;
+    match list.len() {
+        1 => list[0].as_u64().map(|v| PaddingDimensions::from(v as usize)),
+        2 => {
+            let v0 = list[0].as_u64()?;
+            let v1 = list[1].as_u64()?;
+            Some(PaddingDimensions::from((v0 as usize, v1 as usize)))
+        }
+        4 => {
+            let v0 = list[0].as_u64()?;
+            let v1 = list[1].as_u64()?;
+            let v2 = list[2].as_u64()?;
+            let v3 = list[3].as_u64()?;
+            Some(PaddingDimensions::from((v0 as usize, v1 as usize, v2 as usize, v3 as usize)))
+        }
+        _ => None,
+    }
+}
+
+fn parse_box_value(value: &serde_json::Value) -> Option<rich_rs::r#box::Box> {
+    if value.is_null() {
+        return None;
+    }
+    let name = value.as_str()?.to_ascii_uppercase();
+    if name == "BLANK" || name == "NONE" {
+        return None;
+    }
+    Some(match name.as_str() {
+        "ASCII" => ASCII,
+        "ASCII2" => ASCII2,
+        "ASCII_DOUBLE_HEAD" => ASCII_DOUBLE_HEAD,
+        "SQUARE" => SQUARE,
+        "SQUARE_DOUBLE_HEAD" => SQUARE_DOUBLE_HEAD,
+        "MINIMAL" => MINIMAL,
+        "MINIMAL_HEAVY_HEAD" => MINIMAL_HEAVY_HEAD,
+        "MINIMAL_DOUBLE_HEAD" => MINIMAL_DOUBLE_HEAD,
+        "SIMPLE" => SIMPLE,
+        "SIMPLE_HEAD" => SIMPLE_HEAD,
+        "SIMPLE_HEAVY" => SIMPLE_HEAVY,
+        "HORIZONTALS" => HORIZONTALS,
+        "HORIZONTALS_DOUBLE_TOP" => HORIZONTALS,
+        "ROUNDED" => ROUNDED,
+        "HEAVY" => HEAVY,
+        "HEAVY_EDGE" => HEAVY_EDGE,
+        "HEAVY_HEAD" => HEAVY_HEAD,
+        "DOUBLE" => DOUBLE,
+        "DOUBLE_EDGE" => DOUBLE_EDGE,
+        "MARKDOWN" => MARKDOWN,
+        _ => return None,
+    })
+}
+
+fn parse_align(value: &serde_json::Value) -> Option<AlignMethod> {
+    match value.as_str()? {
+        "left" | "Left" | "LEFT" => Some(AlignMethod::Left),
+        "center" | "Center" | "CENTER" => Some(AlignMethod::Center),
+        "right" | "Right" | "RIGHT" => Some(AlignMethod::Right),
+        _ => None,
+    }
+}
+
+fn parse_color_system_mode(value: &serde_json::Value) -> Option<ColorSystemMode> {
+    match value.as_str()? {
+        "auto" => Some(ColorSystemMode::Auto),
+        "standard" => Some(ColorSystemMode::Standard),
+        "256" => Some(ColorSystemMode::EightBit),
+        "truecolor" => Some(ColorSystemMode::TrueColor),
+        "windows" => Some(ColorSystemMode::Windows),
+        "none" => Some(ColorSystemMode::None),
+        _ => None,
+    }
 }
