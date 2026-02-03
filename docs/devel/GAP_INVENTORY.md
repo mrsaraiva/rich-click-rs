@@ -20,7 +20,7 @@ and every unintentional divergence should be turned into a tracked task.
 
 | ID | Area | Gap | Impact | Status | Notes / Next Steps |
 |----|------|-----|--------|--------|--------------------|
-| GAP-HELP-001 | Metavars | Option metavars default to `TEXT` in Rust; Python shows type names (e.g. `INTEGER`) and omits metavars for bool flags. | Medium (help clarity) | Open | Use click-rs param/type info to derive metavars; suppress metavar for bool flag variants. |
+| GAP-HELP-001 | Metavars | Option metavars default to `TEXT` in Rust; Python shows type names (e.g. `INTEGER`) and omits metavars for bool flags. | Medium (help clarity) | Done | Rich-click-rs suppresses metavars for flag/count options; type-specific metavars appear when click-rs option type is set (e.g. `type_(INT)`). |
 | GAP-HELP-002 | Slim theme | Rust uses table rendering for slim theme; Python uses a compact list layout and `default=...` formatting. | Low | Open | Add slim-specific renderer and default formatting parity (`default=1`, metavar bracketing). |
 | GAP-HELP-003 | Spacing | Rust output has extra blank lines and extra spaces in panel titles (e.g. `╭─  Options  ─`). | Low | Open | Align panel title padding and section spacing with Python output. |
 | GAP-HELP-004 | Aliases | Rust shows alias list in command table by default; Python does not show aliases unless configured. | Low | Open | Gate alias rendering behind config flag (`HELPTEXT_SHOW_ALIASES`). |

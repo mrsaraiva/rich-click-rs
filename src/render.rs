@@ -764,14 +764,14 @@ impl RichHelpRenderer {
             "opt_long_metavar" => self.build_option_with_metavar(&opt.long, opt),
             "opt_all_metavar" => {
                 let mut text = self.build_option_all_text(opt);
-                if let Some(mv) = opt.get_metavar() {
+                if let Some(mv) = self.option_metavar(opt) {
                     text.append(" ", Some(self.config.style_option_help));
                     text.append(mv, Some(self.config.style_metavar));
                 }
                 Some(Box::new(text))
             }
             "metavar" | "metavar_short" => {
-                opt.get_metavar()
+                self.option_metavar(opt)
                     .map(|mv| Box::new(Text::styled(mv, self.config.style_metavar)) as Box<_>)
             }
             "help" => Some(Box::new(self.build_option_help_text(opt)) as Box<_>),
@@ -832,7 +832,7 @@ impl RichHelpRenderer {
             }
             text.append(item, Some(self.config.style_option));
         }
-        if let Some(mv) = opt.get_metavar() {
+        if let Some(mv) = self.option_metavar(opt) {
             text.append(" ", Some(self.config.style_option_help));
             text.append(mv, Some(self.config.style_metavar));
         }
@@ -869,8 +869,12 @@ impl RichHelpRenderer {
                         None
                     }
                 }
-                "metavar" => opt.get_metavar().map(|mv| self.config.append_metavars_help_string.replace("{}", &mv)),
-                "range" => opt.get_metavar().map(|mv| self.config.append_range_help_string.replace("{}", &mv)),
+                "metavar" => self
+                    .option_metavar(opt)
+                    .map(|mv| self.config.append_metavars_help_string.replace("{}", &mv)),
+                "range" => self
+                    .option_metavar(opt)
+                    .map(|mv| self.config.append_range_help_string.replace("{}", &mv)),
                 "deprecated" => None,
                 _ => None,
             };
@@ -890,6 +894,13 @@ impl RichHelpRenderer {
             }
         }
         text
+    }
+
+    fn option_metavar(&self, opt: &click::option::ClickOption) -> Option<String> {
+        if opt.is_flag || opt.count {
+            return None;
+        }
+        opt.get_metavar()
     }
 
     fn partition_options(

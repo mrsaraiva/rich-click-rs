@@ -1,4 +1,5 @@
 use click::{Argument, Command, ContextBuilder, OptionBuilder};
+use click::types::INT;
 use click::group::CommandLike;
 use click::group::Group;
 use std::sync::Arc;
@@ -10,6 +11,7 @@ fn main() {
         .option(
             OptionBuilder::new(&["--count"])
                 .help("Number of greetings")
+                .type_any(INT)
                 .default("1")
                 .show_default()
                 .build(),
@@ -53,6 +55,7 @@ fn main() {
         .option(
             OptionBuilder::new(&["--speed"])
                 .help("Speed")
+                .type_any(INT)
                 .default("1")
                 .show_default()
                 .build(),
