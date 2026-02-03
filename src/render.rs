@@ -633,17 +633,28 @@ impl RichHelpRenderer {
 
     fn collect_commands(&self, group: &Group) -> Vec<CommandEntry> {
         let mut commands = Vec::new();
+        let mut seen = std::collections::HashSet::new();
         if self.config.show_commands.unwrap_or(true) {
             for (registered, cmd) in group.list_command_entries() {
+                let ptr = cmd as *const dyn CommandLike as *const () as usize;
+                if seen.contains(&ptr) {
+                    continue;
+                }
+                seen.insert(ptr);
                 if cmd.is_hidden() {
                     continue;
                 }
+                let canonical = cmd.name().unwrap_or(&registered).to_string();
                 let mut aliases = group.list_command_aliases(&registered);
+                if registered != canonical && !aliases.iter().any(|a| a == &registered) {
+                    aliases.push(registered.clone());
+                }
                 if let Some(extra) = self.config.command_aliases.get(&registered) {
                     aliases.extend(extra.iter().cloned());
                 }
                 aliases.sort();
                 aliases.dedup();
+                aliases.retain(|a| a != &canonical);
 
                 let mut help = cmd.get_short_help();
                 if self.config.helptext_show_aliases && !aliases.is_empty() {
@@ -657,7 +668,7 @@ impl RichHelpRenderer {
                 }
 
                 commands.push(CommandEntry {
-                    name: registered,
+                    name: canonical,
                     help,
                     aliases,
                 });
