@@ -129,7 +129,23 @@ impl RichHelpRenderer {
                     if cmd.is_hidden() {
                         continue;
                     }
-                    let help = cmd.get_short_help();
+                    let mut help = cmd.get_short_help();
+                    if self.config.helptext_show_aliases {
+                        if let Some(aliases) = self.config.command_aliases.get(name) {
+                            if !aliases.is_empty() {
+                                let joined = aliases.join(&self.config.delimiter_comma);
+                                let alias_text = self
+                                    .config
+                                    .helptext_aliases_string
+                                    .replace("{}", &joined);
+                                if help.is_empty() {
+                                    help = alias_text;
+                                } else {
+                                    help = format!("{}  {}", help, alias_text);
+                                }
+                            }
+                        }
+                    }
                     commands.push((name.to_string(), help));
                 }
             }

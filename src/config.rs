@@ -1,4 +1,5 @@
 use std::sync::OnceLock;
+use std::collections::HashMap;
 
 use rich_rs::r#box::{
     ASCII, ASCII2, ASCII_DOUBLE_HEAD, DOUBLE, DOUBLE_EDGE, HEAVY, HEAVY_EDGE, HEAVY_HEAD,
@@ -240,6 +241,7 @@ pub struct RichHelpConfig {
     pub text_emojis: Option<bool>,
     pub use_click_short_help: bool,
     pub helptext_show_aliases: bool,
+    pub command_aliases: HashMap<String, Vec<String>>,
 
     pub panel_options: PanelConfig,
     pub panel_commands: PanelConfig,
@@ -388,6 +390,7 @@ impl Default for RichHelpConfig {
             text_emojis: None,
             use_click_short_help: false,
             helptext_show_aliases: true,
+            command_aliases: HashMap::new(),
             panel_options: PanelConfig::default(),
             panel_commands: PanelConfig::default(),
             panel_arguments: PanelConfig::default(),
@@ -418,6 +421,8 @@ impl RichHelpConfig {
         if !cfg.enable_theme_env_var {
             return cfg;
         }
+        apply_terminal_width_env(&mut cfg);
+        apply_force_terminal_env(&mut cfg);
         let env = std::env::var("RICH_CLICK_THEME").ok();
         if let Some(value) = env {
             if value.trim_start().starts_with('{') {
@@ -563,6 +568,7 @@ impl RichHelpConfig {
             "text_emojis" => self.text_emojis = value.as_bool(),
             "use_click_short_help" => if let Some(v) = value.as_bool() { self.use_click_short_help = v; },
             "helptext_show_aliases" => if let Some(v) = value.as_bool() { self.helptext_show_aliases = v; },
+            "command_aliases" => if let Some(v) = parse_alias_map(value) { self.command_aliases = v; },
             "padding_header_text" => if let Some(v) = parse_padding_value(value) { self.padding_header_text = v; },
             "padding_usage" => if let Some(v) = parse_padding_value(value) { self.padding_usage = v; },
             "padding_helptext" => if let Some(v) = parse_padding_value(value) { self.padding_helptext = v; },
@@ -578,6 +584,13 @@ impl RichHelpConfig {
     }
 
     fn sync_render_config(&mut self) {
+        if self.text_emojis.is_none() {
+            self.text_emojis = Some(matches!(
+                self.text_markup,
+                TextMarkup::Markdown | TextMarkup::Rich
+            ));
+        }
+
         self.panel_options.box_type = self.style_options_panel_box.unwrap_or(ROUNDED);
         self.panel_options.border_style = self.style_options_panel_border;
         self.panel_options.title_style = self.style_options_panel_title_style;
@@ -615,6 +628,42 @@ impl RichHelpConfig {
         self.table_commands.border_style = self.style_commands_table_border_style;
 
         self.table_arguments = self.table_options.clone();
+    }
+}
+
+fn apply_terminal_width_env(cfg: &mut RichHelpConfig) {
+    let width = std::env::var("TERMINAL_WIDTH").ok();
+    if let Some(value) = width {
+        if let Ok(parsed) = value.trim().parse::<usize>() {
+            if cfg.width.is_none() {
+                cfg.width = Some(parsed);
+            }
+            if cfg.max_width.is_none() {
+                cfg.max_width = Some(parsed);
+            }
+        }
+    }
+}
+
+fn apply_force_terminal_env(cfg: &mut RichHelpConfig) {
+    if cfg.force_terminal.is_some() {
+        return;
+    }
+    for key in ["FORCE_COLOR", "PY_COLORS", "GITHUB_ACTIONS"] {
+        if let Ok(value) = std::env::var(key) {
+            if let Some(parsed) = parse_truthy(&value) {
+                cfg.force_terminal = Some(parsed);
+                return;
+            }
+        }
+    }
+}
+
+fn parse_truthy(value: &str) -> Option<bool> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Some(true),
+        "0" | "false" | "no" | "off" => Some(false),
+        _ => None,
     }
 }
 
@@ -707,6 +756,17 @@ fn parse_string_list(value: &serde_json::Value) -> Option<Vec<String>> {
         }
     }
     Some(out)
+}
+
+fn parse_alias_map(value: &serde_json::Value) -> Option<HashMap<String, Vec<String>>> {
+    let obj = value.as_object()?;
+    let mut map = HashMap::new();
+    for (key, val) in obj {
+        if let Some(list) = parse_string_list(val) {
+            map.insert(key.to_string(), list);
+        }
+    }
+    Some(map)
 }
 
 fn parse_padding_value(value: &serde_json::Value) -> Option<PaddingDimensions> {
