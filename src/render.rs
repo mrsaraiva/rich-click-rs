@@ -19,6 +19,13 @@ pub struct RichHelpRenderer {
     config: RichHelpConfig,
 }
 
+#[derive(Debug, Clone)]
+struct CommandEntry {
+    name: String,
+    help: String,
+    aliases: Vec<String>,
+}
+
 impl RichHelpRenderer {
     pub fn new(config: RichHelpConfig) -> Self {
         Self { config }
@@ -288,7 +295,7 @@ impl RichHelpRenderer {
     fn print_command_panels<W: io::Write>(
         &self,
         console: &mut Console<W>,
-        commands: &[(String, String)],
+        commands: &[CommandEntry],
     ) -> io::Result<()> {
         let mut remaining = commands.to_vec();
         let mut panels = Vec::new();
@@ -579,33 +586,36 @@ impl RichHelpRenderer {
         options
     }
 
-    fn collect_commands(&self, group: &Group) -> Vec<(String, String)> {
+    fn collect_commands(&self, group: &Group) -> Vec<CommandEntry> {
         let mut commands = Vec::new();
         if self.config.show_commands.unwrap_or(true) {
-            for name in group.list_commands() {
-                if let Some(cmd) = group.get_command(name) {
-                    if cmd.is_hidden() {
-                        continue;
-                    }
-                    let mut help = cmd.get_short_help();
-                    if self.config.helptext_show_aliases {
-                        if let Some(aliases) = self.config.command_aliases.get(name) {
-                            if !aliases.is_empty() {
-                                let joined = aliases.join(&self.config.delimiter_comma);
-                                let alias_text = self
-                                    .config
-                                    .helptext_aliases_string
-                                    .replace("{}", &joined);
-                                if help.is_empty() {
-                                    help = alias_text;
-                                } else {
-                                    help = format!("{}  {}", help, alias_text);
-                                }
-                            }
-                        }
-                    }
-                    commands.push((name.to_string(), help));
+            for (registered, cmd) in group.list_command_entries() {
+                if cmd.is_hidden() {
+                    continue;
                 }
+                let mut aliases = group.list_command_aliases(&registered);
+                if let Some(extra) = self.config.command_aliases.get(&registered) {
+                    aliases.extend(extra.iter().cloned());
+                }
+                aliases.sort();
+                aliases.dedup();
+
+                let mut help = cmd.get_short_help();
+                if self.config.helptext_show_aliases && !aliases.is_empty() {
+                    let joined = aliases.join(&self.config.delimiter_comma);
+                    let alias_text = self.config.helptext_aliases_string.replace("{}", &joined);
+                    if help.is_empty() {
+                        help = alias_text;
+                    } else {
+                        help = format!("{}  {}", help, alias_text);
+                    }
+                }
+
+                commands.push(CommandEntry {
+                    name: registered,
+                    help,
+                    aliases,
+                });
             }
         }
         commands
@@ -636,40 +646,34 @@ impl RichHelpRenderer {
 
     fn build_command_rows(
         &self,
-        commands: &[(String, String)],
+        commands: &[CommandEntry],
     ) -> Vec<Vec<Box<dyn rich_rs::Renderable + Send + Sync>>> {
         let mut rows = Vec::new();
         let column_types = self.config.commands_table_column_types.clone();
 
-        for (name, help) in commands {
-            let aliases = self
-                .config
-                .command_aliases
-                .get(name)
-                .cloned()
-                .unwrap_or_default();
-            let alias_str = if aliases.is_empty() {
+        for entry in commands {
+            let alias_str = if entry.aliases.is_empty() {
                 String::new()
             } else {
-                aliases.join(&self.config.delimiter_comma)
+                entry.aliases.join(&self.config.delimiter_comma)
             };
 
             let mut row = Vec::new();
             for col in &column_types {
                 let cell: Box<dyn rich_rs::Renderable + Send + Sync> = match col.as_str() {
-                    "name" => Box::new(Text::styled(name, self.config.style_command)),
+                    "name" => Box::new(Text::styled(&entry.name, self.config.style_command)),
                     "aliases" => Box::new(Text::styled(&alias_str, self.config.style_command_aliases)),
                     "name_with_aliases" => {
                         if alias_str.is_empty() {
-                            Box::new(Text::styled(name, self.config.style_command))
+                            Box::new(Text::styled(&entry.name, self.config.style_command))
                         } else {
-                            let mut t = Text::styled(name, self.config.style_command);
+                            let mut t = Text::styled(&entry.name, self.config.style_command);
                             t.append(&self.config.delimiter_slash, Some(self.config.style_option_help));
                             t.append(&alias_str, Some(self.config.style_command_aliases));
                             Box::new(t)
                         }
                     }
-                    "help" => Box::new(Text::styled(help, self.config.style_command_help)),
+                    "help" => Box::new(Text::styled(&entry.help, self.config.style_command_help)),
                     _ => Box::new(Text::plain("")),
                 };
                 row.push(cell);
@@ -866,16 +870,16 @@ impl RichHelpRenderer {
 
     fn partition_commands(
         &self,
-        commands: &[(String, String)],
+        commands: &[CommandEntry],
         names: &[String],
-    ) -> (Vec<(String, String)>, Vec<(String, String)>) {
+    ) -> (Vec<CommandEntry>, Vec<CommandEntry>) {
         let mut selected = Vec::new();
         let mut remaining = Vec::new();
-        for (name, help) in commands {
-            if names.iter().any(|n| n == name) {
-                selected.push((name.clone(), help.clone()));
+        for entry in commands {
+            if names.iter().any(|n| n == &entry.name) {
+                selected.push(entry.clone());
             } else {
-                remaining.push((name.clone(), help.clone()));
+                remaining.push(entry.clone());
             }
         }
         (selected, remaining)
