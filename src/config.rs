@@ -244,6 +244,8 @@ pub struct RichHelpConfig {
     pub use_click_short_help: bool,
     pub helptext_show_aliases: bool,
     pub command_aliases: HashMap<String, Vec<String>>,
+    pub option_groups: Vec<GroupConfig>,
+    pub command_groups: Vec<GroupConfig>,
 
     pub panel_options: PanelConfig,
     pub panel_commands: PanelConfig,
@@ -251,6 +253,16 @@ pub struct RichHelpConfig {
     pub table_options: TableConfig,
     pub table_commands: TableConfig,
     pub table_arguments: TableConfig,
+}
+
+#[derive(Debug, Clone)]
+pub struct GroupConfig {
+    pub name: String,
+    pub items: Vec<String>,
+    pub help: Option<String>,
+    pub inline_help_in_title: Option<bool>,
+    pub title_style: Option<Style>,
+    pub help_style: Option<Style>,
 }
 
 impl Default for RichHelpConfig {
@@ -395,6 +407,8 @@ impl Default for RichHelpConfig {
             use_click_short_help: false,
             helptext_show_aliases: true,
             command_aliases: HashMap::new(),
+            option_groups: Vec::new(),
+            command_groups: Vec::new(),
             panel_options: PanelConfig::default(),
             panel_commands: PanelConfig::default(),
             panel_arguments: PanelConfig::default(),
@@ -575,6 +589,8 @@ impl RichHelpConfig {
             "use_click_short_help" => if let Some(v) = value.as_bool() { self.use_click_short_help = v; },
             "helptext_show_aliases" => if let Some(v) = value.as_bool() { self.helptext_show_aliases = v; },
             "command_aliases" => if let Some(v) = parse_alias_map(value) { self.command_aliases = v; },
+            "option_groups" => if let Some(v) = parse_group_list(value, "options") { self.option_groups = v; },
+            "command_groups" => if let Some(v) = parse_group_list(value, "commands") { self.command_groups = v; },
             "padding_header_text" => if let Some(v) = parse_padding_value(value) { self.padding_header_text = v; },
             "padding_usage" => if let Some(v) = parse_padding_value(value) { self.padding_usage = v; },
             "padding_helptext" => if let Some(v) = parse_padding_value(value) { self.padding_helptext = v; },
@@ -778,6 +794,33 @@ fn parse_alias_map(value: &serde_json::Value) -> Option<HashMap<String, Vec<Stri
         }
     }
     Some(map)
+}
+
+fn parse_group_list(value: &serde_json::Value, key: &str) -> Option<Vec<GroupConfig>> {
+    let list = value.as_array()?;
+    let mut groups = Vec::new();
+    for item in list {
+        let obj = item.as_object()?;
+        let name = obj.get("name").and_then(|v| v.as_str()).unwrap_or("Group").to_string();
+        let items = obj
+            .get(key)
+            .and_then(parse_string_list)
+            .or_else(|| obj.get("items").and_then(parse_string_list))
+            .unwrap_or_default();
+        let help = obj.get("help").and_then(|v| v.as_str()).map(|v| v.to_string());
+        let inline_help_in_title = obj.get("inline_help_in_title").and_then(|v| v.as_bool());
+        let title_style = obj.get("title_style").and_then(|v| v.as_str()).map(parse_style);
+        let help_style = obj.get("help_style").and_then(|v| v.as_str()).map(parse_style);
+        groups.push(GroupConfig {
+            name,
+            items,
+            help,
+            inline_help_in_title,
+            title_style,
+            help_style,
+        });
+    }
+    Some(groups)
 }
 
 fn parse_padding_value(value: &serde_json::Value) -> Option<PaddingDimensions> {

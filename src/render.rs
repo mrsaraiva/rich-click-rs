@@ -78,7 +78,7 @@ impl RichHelpRenderer {
         let options = self.collect_options(command, ctx);
         if !options.is_empty() {
             self.print_section_spacing(console, &mut sections_printed)?;
-            self.print_options_panel(console, &options)?;
+            self.print_option_panels(console, &options)?;
         }
 
         if let Some(epilog) = command.epilog.as_deref() {
@@ -122,8 +122,8 @@ impl RichHelpRenderer {
 
         if self.config.commands_before_options {
             if !commands.is_empty() {
-                self.print_section_spacing(console, &mut sections_printed)?;
-            self.print_commands_panel(console, &commands)?;
+            self.print_section_spacing(console, &mut sections_printed)?;
+            self.print_command_panels(console, &commands)?;
             }
         }
 
@@ -142,13 +142,13 @@ impl RichHelpRenderer {
 
         if !options.is_empty() {
             self.print_section_spacing(console, &mut sections_printed)?;
-            self.print_options_panel(console, &options)?;
+            self.print_option_panels(console, &options)?;
         }
 
         if !self.config.commands_before_options {
             if !commands.is_empty() {
-                self.print_section_spacing(console, &mut sections_printed)?;
-                self.print_commands_panel(console, &commands)?;
+            self.print_section_spacing(console, &mut sections_printed)?;
+            self.print_command_panels(console, &commands)?;
             }
         }
 
@@ -227,52 +227,128 @@ impl RichHelpRenderer {
         Ok(())
     }
 
-    fn print_options_panel<W: io::Write>(
+    fn print_option_panels<W: io::Write>(
         &self,
         console: &mut Console<W>,
         options: &[click::option::ClickOption],
     ) -> io::Result<()> {
-        let rows = self.build_option_rows(options);
-        if rows.is_empty() {
-            return Ok(());
+        let mut remaining = options.to_vec();
+        let mut panels = Vec::new();
+
+        if !self.config.option_groups.is_empty() {
+            for group in &self.config.option_groups {
+                let (group_items, rest) = self.partition_options(&remaining, &group.items);
+                remaining = rest;
+                if group_items.is_empty() {
+                    continue;
+                }
+                let rows = self.build_option_rows(&group_items);
+                let table = self.build_table_from_rows(rows, &self.config.table_options, None);
+                let title_style = group.title_style.unwrap_or(self.config.panel_options.title_style);
+                let help_style = group.help_style.unwrap_or(self.config.style_options_panel_help_style);
+                let inline = group.inline_help_in_title.unwrap_or(self.config.panel_inline_help_in_title);
+                let panel = self.build_panel(
+                    &group.name,
+                    table,
+                    &self.config.panel_options,
+                    group.help.as_deref(),
+                    help_style,
+                    Some(title_style),
+                    inline,
+                );
+                panels.push(panel);
+            }
         }
-        let table = self.build_table_from_rows(
-            rows,
-            &self.config.table_options,
-            None,
-        );
-        let panel = self.build_panel(
-            &self.config.options_panel_title,
-            table,
-            &self.config.panel_options,
-            None,
-            self.config.style_options_panel_help_style,
-        );
-        console.print(&panel, None, None, None, false, "\n")
+
+        if !remaining.is_empty() {
+            let rows = self.build_option_rows(&remaining);
+            let table = self.build_table_from_rows(rows, &self.config.table_options, None);
+            let panel = self.build_panel(
+                &self.config.options_panel_title,
+                table,
+                &self.config.panel_options,
+                None,
+                self.config.style_options_panel_help_style,
+                None,
+                self.config.panel_inline_help_in_title,
+            );
+            if self.config.default_panels_first {
+                panels.insert(0, panel);
+            } else {
+                panels.push(panel);
+            }
+        }
+
+        for panel in panels {
+            console.print(&panel, None, None, None, false, "\n")?;
+        }
+        Ok(())
     }
 
-    fn print_commands_panel<W: io::Write>(
+    fn print_command_panels<W: io::Write>(
         &self,
         console: &mut Console<W>,
         commands: &[(String, String)],
     ) -> io::Result<()> {
-        let rows = self.build_command_rows(commands);
-        if rows.is_empty() {
-            return Ok(());
+        let mut remaining = commands.to_vec();
+        let mut panels = Vec::new();
+
+        if !self.config.command_groups.is_empty() {
+            for group in &self.config.command_groups {
+                let (group_items, rest) = self.partition_commands(&remaining, &group.items);
+                remaining = rest;
+                if group_items.is_empty() {
+                    continue;
+                }
+                let rows = self.build_command_rows(&group_items);
+                let table = self.build_table_from_rows(
+                    rows,
+                    &self.config.table_commands,
+                    self.config.style_commands_table_column_width_ratio,
+                );
+                let title_style = group.title_style.unwrap_or(self.config.panel_commands.title_style);
+                let help_style = group.help_style.unwrap_or(self.config.style_commands_panel_help_style);
+                let inline = group.inline_help_in_title.unwrap_or(self.config.panel_inline_help_in_title);
+                let panel = self.build_panel(
+                    &group.name,
+                    table,
+                    &self.config.panel_commands,
+                    group.help.as_deref(),
+                    help_style,
+                    Some(title_style),
+                    inline,
+                );
+                panels.push(panel);
+            }
         }
-        let table = self.build_table_from_rows(
-            rows,
-            &self.config.table_commands,
-            self.config.style_commands_table_column_width_ratio,
-        );
-        let panel = self.build_panel(
-            &self.config.commands_panel_title,
-            table,
-            &self.config.panel_commands,
-            None,
-            self.config.style_commands_panel_help_style,
-        );
-        console.print(&panel, None, None, None, false, "\n")
+
+        if !remaining.is_empty() {
+            let rows = self.build_command_rows(&remaining);
+            let table = self.build_table_from_rows(
+                rows,
+                &self.config.table_commands,
+                self.config.style_commands_table_column_width_ratio,
+            );
+            let panel = self.build_panel(
+                &self.config.commands_panel_title,
+                table,
+                &self.config.panel_commands,
+                None,
+                self.config.style_commands_panel_help_style,
+                None,
+                self.config.panel_inline_help_in_title,
+            );
+            if self.config.default_panels_first {
+                panels.insert(0, panel);
+            } else {
+                panels.push(panel);
+            }
+        }
+
+        for panel in panels {
+            console.print(&panel, None, None, None, false, "\n")?;
+        }
+        Ok(())
     }
 
     fn print_table_panel<W: io::Write>(
@@ -295,7 +371,15 @@ impl RichHelpRenderer {
             })
             .collect::<Vec<_>>();
         let table = self.build_table_from_rows(rows, table_cfg, None);
-        let panel = self.build_panel(title, table, panel_cfg, None, self.config.style_options_panel_help_style);
+        let panel = self.build_panel(
+            title,
+            table,
+            panel_cfg,
+            None,
+            self.config.style_options_panel_help_style,
+            None,
+            self.config.panel_inline_help_in_title,
+        );
         console.print(&panel, None, None, None, false, "\n")
     }
 
@@ -350,8 +434,11 @@ impl RichHelpRenderer {
         panel_cfg: &PanelConfig,
         help_text: Option<&str>,
         help_style: Style,
+        title_override: Option<Style>,
+        inline_help: bool,
     ) -> Panel {
-        let title_text = self.build_panel_title(title, panel_cfg.title_style, help_text, help_style);
+        let title_style = title_override.unwrap_or(panel_cfg.title_style);
+        let title_text = self.build_panel_title(title, title_style, help_text, help_style, inline_help);
         Panel::new(Box::new(table))
             .with_box(panel_cfg.box_type)
             .with_title_text(title_text)
@@ -448,7 +535,14 @@ impl RichHelpRenderer {
         input.to_string()
     }
 
-    fn build_panel_title(&self, title: &str, style: Style, help: Option<&str>, help_style: Style) -> Text {
+    fn build_panel_title(
+        &self,
+        title: &str,
+        style: Style,
+        help: Option<&str>,
+        help_style: Style,
+        inline_help: bool,
+    ) -> Text {
         let formatted = self.config.panel_title_string.replace("{}", title);
         let padding = self.config.panel_title_padding;
         let mut padded = String::new();
@@ -459,7 +553,7 @@ impl RichHelpRenderer {
         for _ in 0..padding {
             padded.push(' ');
         }
-        if self.config.panel_inline_help_in_title {
+        if inline_help {
             if let Some(help_text) = help {
                 let mut text = Text::styled(padded, style);
                 text.append(&self.config.panel_inline_help_delimiter, Some(self.config.style_option_help));
@@ -716,6 +810,8 @@ impl RichHelpRenderer {
                     }
                 }
                 "metavar" => opt.get_metavar().map(|mv| self.config.append_metavars_help_string.replace("{}", &mv)),
+                "range" => opt.get_metavar().map(|mv| self.config.append_range_help_string.replace("{}", &mv)),
+                "deprecated" => None,
                 _ => None,
             };
             if let Some(piece) = piece {
@@ -726,6 +822,7 @@ impl RichHelpRenderer {
                     "envvar" => self.config.style_option_envvar,
                     "default" => self.config.style_option_default,
                     "required" => self.config.style_required_long,
+                    "metavar" | "range" => self.config.style_metavar_append,
                     _ => self.config.style_option_help,
                 };
                 text.append(piece, Some(style));
@@ -733,6 +830,55 @@ impl RichHelpRenderer {
             }
         }
         text
+    }
+
+    fn partition_options(
+        &self,
+        options: &[click::option::ClickOption],
+        names: &[String],
+    ) -> (Vec<click::option::ClickOption>, Vec<click::option::ClickOption>) {
+        let mut selected = Vec::new();
+        let mut remaining = Vec::new();
+        for opt in options {
+            let mut matched = false;
+            for name in names {
+                if opt.name() == name {
+                    matched = true;
+                    break;
+                }
+                if opt.long.iter().any(|l| l == name) || opt.short.iter().any(|s| s == name) {
+                    matched = true;
+                    break;
+                }
+                if opt.long.iter().any(|l| l.trim_start_matches('-') == name) {
+                    matched = true;
+                    break;
+                }
+            }
+            if matched {
+                selected.push(opt.clone());
+            } else {
+                remaining.push(opt.clone());
+            }
+        }
+        (selected, remaining)
+    }
+
+    fn partition_commands(
+        &self,
+        commands: &[(String, String)],
+        names: &[String],
+    ) -> (Vec<(String, String)>, Vec<(String, String)>) {
+        let mut selected = Vec::new();
+        let mut remaining = Vec::new();
+        for (name, help) in commands {
+            if names.iter().any(|n| n == name) {
+                selected.push((name.clone(), help.clone()));
+            } else {
+                remaining.push((name.clone(), help.clone()));
+            }
+        }
+        (selected, remaining)
     }
 }
 

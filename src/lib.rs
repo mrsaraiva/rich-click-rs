@@ -7,7 +7,8 @@ mod render;
 mod theme;
 
 pub use config::{
-    ColorSystemMode, PanelConfig, RichHelpConfig, RichHelpConfigBuilder, TableConfig, TextMarkup,
+    ColorSystemMode, GroupConfig, PanelConfig, RichHelpConfig, RichHelpConfigBuilder, TableConfig,
+    TextMarkup,
 };
 pub use render::{main_rich_command, main_rich_group, RichHelp, RichHelpRenderer};
 pub use theme::ThemeError;
