@@ -52,7 +52,7 @@ impl RichHelpRenderer {
 
         let mut sections_printed = false;
 
-        if self.config.show_arguments {
+        if self.config.show_arguments.unwrap_or(true) {
             let arg_records = command
                 .arguments
                 .iter()
@@ -66,7 +66,7 @@ impl RichHelpRenderer {
                     &self.config.arguments_panel_title,
                     &arg_records,
                     self.config.style_argument,
-                    self.config.style_help,
+                    self.config.style_helptext,
                 )?;
             }
         }
@@ -95,7 +95,7 @@ impl RichHelpRenderer {
         if let Some(epilog) = command.epilog.as_deref() {
             if !epilog.is_empty() {
                 console.print_text("")?;
-                console.print(&Text::styled(epilog, self.config.style_help), None, None, None, false, "\n")?;
+                console.print(&Text::styled(epilog, self.config.style_helptext), None, None, None, false, "\n")?;
             }
         }
 
@@ -116,7 +116,7 @@ impl RichHelpRenderer {
         let mut sections_printed = false;
 
         let mut commands = Vec::new();
-        if self.config.show_commands {
+        if self.config.show_commands.unwrap_or(true) {
             for name in group.list_commands() {
                 if let Some(cmd) = group.get_command(name) {
                     if cmd.is_hidden() {
@@ -141,7 +141,7 @@ impl RichHelpRenderer {
         }
 
         let mut arguments = Vec::new();
-        if self.config.show_arguments {
+        if self.config.show_arguments.unwrap_or(true) {
             arguments = group
                 .command
                 .arguments
@@ -171,7 +171,7 @@ impl RichHelpRenderer {
                 &self.config.arguments_panel_title,
                 &arguments,
                 self.config.style_argument,
-                self.config.style_help,
+                self.config.style_helptext,
             )?;
         }
 
@@ -202,7 +202,7 @@ impl RichHelpRenderer {
         if let Some(epilog) = group.command.epilog.as_deref() {
             if !epilog.is_empty() {
                 console.print_text("")?;
-                console.print(&Text::styled(epilog, self.config.style_help), None, None, None, false, "\n")?;
+                console.print(&Text::styled(epilog, self.config.style_helptext), None, None, None, false, "\n")?;
             }
         }
 
@@ -228,7 +228,7 @@ impl RichHelpRenderer {
                 } else {
                     help_text.to_string()
                 };
-                console.print(&Text::styled(&decorated, self.config.style_help), None, None, None, false, "\n")?;
+                console.print(&Text::styled(&decorated, self.config.style_helptext), None, None, None, false, "\n")?;
                 rendered = true;
             }
         }
@@ -335,9 +335,7 @@ impl RichHelpRenderer {
         if let Some(max_width) = self.config.max_width {
             options.max_width = max_width;
         }
-        if let Some(color_system) = self.config.color_system {
-            options.color_system = Some(color_system);
-        }
+        options.color_system = self.config.color_system.to_color_system(options.color_system);
         if let Some(force_terminal) = self.config.force_terminal {
             options.is_terminal = force_terminal;
             if !force_terminal {

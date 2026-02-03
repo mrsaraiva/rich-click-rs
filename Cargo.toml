@@ -12,5 +12,6 @@ categories = ["command-line-interface"]
 [dependencies]
 click = { path = "../click-rs" }
 rich-rs = { path = "../rich-rs" }
+serde_json = "1.0"
 
 [dev-dependencies]
