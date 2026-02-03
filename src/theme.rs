@@ -247,10 +247,11 @@ fn apply_format_box(cfg: &mut RichHelpConfig) {
     cfg.style_errors_panel_box = Some(ROUNDED);
     cfg.style_options_table_box = None;
     cfg.style_commands_table_box = None;
-    cfg.style_options_table_expand = true;
+    cfg.style_options_table_expand = false;
     cfg.style_commands_table_expand = true;
-    cfg.style_options_table_padding = PaddingDimensions::from((0, 1));
-    cfg.style_commands_table_padding = PaddingDimensions::from((0, 1));
+    cfg.style_commands_table_column_width_ratio = None;
+    cfg.style_options_table_padding = PaddingDimensions::from((0, 2, 0, 1));
+    cfg.style_commands_table_padding = PaddingDimensions::from((0, 1, 0, 2));
     cfg.style_options_panel_padding = PaddingDimensions::from((0, 1));
     cfg.style_commands_panel_padding = PaddingDimensions::from((0, 1));
     cfg.panel_inline_help_in_title = false;

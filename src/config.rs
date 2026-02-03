@@ -405,7 +405,7 @@ impl Default for RichHelpConfig {
             text_emojis: None,
             text_paragraph_linebreaks: None,
             use_click_short_help: false,
-            helptext_show_aliases: true,
+            helptext_show_aliases: false,
             command_aliases: HashMap::new(),
             option_groups: Vec::new(),
             command_groups: Vec::new(),

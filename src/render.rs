@@ -777,6 +777,14 @@ impl RichHelpRenderer {
         if column_types.iter().any(|c| c == "required") && !options.iter().any(|opt| opt.required()) {
             column_types.retain(|c| c != "required");
         }
+        if column_types.iter().any(|c| c == "opt_short") && !options.iter().any(|opt| !opt.short.is_empty()) {
+            column_types.retain(|c| c != "opt_short");
+        }
+        if column_types.iter().any(|c| c == "metavar")
+            && !options.iter().any(|opt| self.option_metavar(opt).is_some())
+        {
+            column_types.retain(|c| c != "metavar");
+        }
 
         for opt in options {
             let mut row = Vec::new();
@@ -850,7 +858,7 @@ impl RichHelpRenderer {
                     None
                 }
             }
-            "opt_long" => self.build_option_list(&opt.long, self.config.style_option),
+            "opt_long" => self.build_option_long(opt),
             "opt_short" => self.build_option_list(&opt.short, self.config.style_switch),
             "opt_all" => {
                 Some(Box::new(self.build_option_all_text(opt)) as Box<_>)
@@ -889,6 +897,23 @@ impl RichHelpRenderer {
             text.append(item, Some(style));
         }
         Some(Box::new(text))
+    }
+
+    fn build_option_long(
+        &self,
+        opt: &click::option::ClickOption,
+    ) -> Option<Box<dyn rich_rs::Renderable + Send + Sync>> {
+        if opt.long.is_empty() {
+            return None;
+        }
+        if opt.is_bool_flag && opt.long.len() == 2 {
+            let mut text = Text::styled("", self.config.style_option);
+            text.append(&opt.long[0], Some(self.config.style_option));
+            text.append(&self.config.delimiter_slash, Some(self.config.style_option_help));
+            text.append(&opt.long[1], Some(self.config.style_option));
+            return Some(Box::new(text));
+        }
+        self.build_option_list(&opt.long, self.config.style_option)
     }
 
     fn build_option_all_text(&self, opt: &click::option::ClickOption) -> Text {
@@ -1021,7 +1046,7 @@ impl RichHelpRenderer {
         }
         if !options.is_empty() {
             if printed_any {
-                console.print_text("")?;
+                self.print_slim_blank(console)?;
             }
             let rows = options
                 .iter()
@@ -1042,7 +1067,7 @@ impl RichHelpRenderer {
         }
         if !commands.is_empty() {
             if printed_any {
-                console.print_text("")?;
+                self.print_slim_blank(console)?;
             }
             let rows = commands
                 .iter()
@@ -1052,7 +1077,7 @@ impl RichHelpRenderer {
             printed_any = true;
         }
         if printed_any {
-            console.print_text("")?;
+            self.print_slim_blank(console)?;
         }
         Ok(())
     }
@@ -1063,7 +1088,8 @@ impl RichHelpRenderer {
         title: &str,
         rows: &[(String, String)],
     ) -> io::Result<()> {
-        console.print_text(title)?;
+        let width = self.line_width();
+        console.print_text(&self.pad_line(title, width))?;
         let max_left = rows
             .iter()
             .map(|(left, _)| left.chars().count())
@@ -1071,17 +1097,40 @@ impl RichHelpRenderer {
             .unwrap_or(0);
         for (left, right) in rows {
             if right.is_empty() {
-                console.print_text(&format!("  {}", left))?;
+                let line = format!("  {}", left);
+                console.print_text(&self.pad_line(&line, width))?;
             } else {
                 let pad = if max_left > left.chars().count() {
                     max_left - left.chars().count()
                 } else {
                     0
                 };
-                console.print_text(&format!("  {}{}  {}", left, " ".repeat(pad), right))?;
+                let line = format!("  {}{}  {}", left, " ".repeat(pad), right);
+                console.print_text(&self.pad_line(&line, width))?;
             }
         }
         Ok(())
+    }
+
+    fn line_width(&self) -> usize {
+        self.config
+            .width
+            .or(self.config.max_width)
+            .unwrap_or(80)
+    }
+
+    fn pad_line(&self, line: &str, width: usize) -> String {
+        let len = line.chars().count();
+        if len >= width {
+            line.to_string()
+        } else {
+            format!("{}{}", line, " ".repeat(width - len))
+        }
+    }
+
+    fn print_slim_blank<W: io::Write>(&self, console: &mut Console<W>) -> io::Result<()> {
+        let width = self.line_width();
+        console.print_text(&" ".repeat(width))
     }
 
     fn slim_option_name(&self, opt: &click::option::ClickOption) -> String {
