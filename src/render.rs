@@ -250,7 +250,7 @@ impl RichHelpRenderer {
         if let Some(help_text) = help {
             if !help_text.trim().is_empty() {
                 console.print_text("")?;
-                let mut decorated = help_text.to_string();
+                let mut decorated = self.apply_paragraph_linebreaks(help_text);
                 if let Some(dep) = deprecated {
                     if dep.is_empty() {
                         decorated = format!("{} {}", decorated, self.config.deprecated_string);
@@ -415,21 +415,23 @@ impl RichHelpRenderer {
     }
 
     fn render_help_text_block(&self, text: &str, has_deprecated: bool) -> Text {
+        let source = self.apply_paragraph_linebreaks(text);
         match self.config.text_markup {
             crate::config::TextMarkup::Markdown => Text::plain(text),
             crate::config::TextMarkup::Rich => {
                 let emojis = self.config.text_emojis.unwrap_or(true);
-                let mut rendered = Text::from_markup(text, emojis).unwrap_or_else(|_| Text::plain(text));
-                self.apply_help_styles(&mut rendered, text, has_deprecated, true);
+                let mut rendered =
+                    Text::from_markup(&source, emojis).unwrap_or_else(|_| Text::plain(&source));
+                self.apply_help_styles(&mut rendered, &source, has_deprecated, true);
                 rendered
             }
             crate::config::TextMarkup::Ansi => {
-                let rendered = Text::from_ansi(text);
+                let rendered = Text::from_ansi(&source);
                 rendered
             }
             crate::config::TextMarkup::None => {
-                let mut rendered = Text::plain(text);
-                self.apply_help_styles(&mut rendered, text, has_deprecated, true);
+                let mut rendered = Text::plain(&source);
+                self.apply_help_styles(&mut rendered, &source, has_deprecated, true);
                 rendered
             }
         }
@@ -452,6 +454,18 @@ impl RichHelpRenderer {
                 rendered.stylize(idx, raw.len(), self.config.style_deprecated);
             }
         }
+    }
+
+    fn apply_paragraph_linebreaks(&self, input: &str) -> String {
+        if let Some(ref breaks) = self.config.text_paragraph_linebreaks {
+            if breaks == "\n" {
+                return input.replace("\n\n", "\n");
+            }
+            if breaks != "\n\n" {
+                return input.replace("\n\n", breaks);
+            }
+        }
+        input.to_string()
     }
 }
 

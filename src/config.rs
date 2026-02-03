@@ -239,6 +239,7 @@ pub struct RichHelpConfig {
     pub option_envvar_first: Option<bool>,
     pub text_markup: TextMarkup,
     pub text_emojis: Option<bool>,
+    pub text_paragraph_linebreaks: Option<String>,
     pub use_click_short_help: bool,
     pub helptext_show_aliases: bool,
     pub command_aliases: HashMap<String, Vec<String>>,
@@ -388,6 +389,7 @@ impl Default for RichHelpConfig {
             option_envvar_first: None,
             text_markup: TextMarkup::Ansi,
             text_emojis: None,
+            text_paragraph_linebreaks: None,
             use_click_short_help: false,
             helptext_show_aliases: true,
             command_aliases: HashMap::new(),
@@ -566,6 +568,7 @@ impl RichHelpConfig {
             "option_envvar_first" => self.option_envvar_first = value.as_bool(),
             "text_markup" => if let Some(v) = parse_text_markup(value) { self.text_markup = v; },
             "text_emojis" => self.text_emojis = value.as_bool(),
+            "text_paragraph_linebreaks" => if let Some(v) = value.as_str() { self.text_paragraph_linebreaks = Some(v.to_string()); },
             "use_click_short_help" => if let Some(v) = value.as_bool() { self.use_click_short_help = v; },
             "helptext_show_aliases" => if let Some(v) = value.as_bool() { self.helptext_show_aliases = v; },
             "command_aliases" => if let Some(v) = parse_alias_map(value) { self.command_aliases = v; },
@@ -716,6 +719,11 @@ impl RichHelpConfigBuilder {
 
     pub fn text_emojis(mut self, enabled: bool) -> Self {
         self.config.text_emojis = Some(enabled);
+        self
+    }
+
+    pub fn text_paragraph_linebreaks(mut self, value: &str) -> Self {
+        self.config.text_paragraph_linebreaks = Some(value.to_string());
         self
     }
 
