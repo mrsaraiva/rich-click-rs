@@ -6,6 +6,7 @@ use click::context::{pop_context, push_context, Context, ContextBuilder};
 use click::error::ClickError;
 use click::group::{CommandLike, Group};
 use click::parameter::Parameter;
+use rich_rs::markdown::Markdown;
 use rich_rs::{Column, Console, ConsoleOptions, Panel, Row, Style, Table, Text};
 
 use crate::config::RichHelpConfig;
@@ -46,7 +47,8 @@ impl RichHelpRenderer {
         ctx: &Context,
     ) -> io::Result<()> {
         let usage = command.get_usage(ctx);
-        console.print_styled(&usage, self.config.style_usage)?;
+        let usage_text = self.render_usage_text(&usage);
+        console.print(&usage_text, None, None, None, false, "\n")?;
 
         self.render_help_text(console, command.help.as_deref(), command.deprecated.as_deref())?;
 
@@ -113,7 +115,8 @@ impl RichHelpRenderer {
         ctx: &Context,
     ) -> io::Result<()> {
         let usage = CommandLike::get_usage(group, ctx);
-        console.print_styled(&usage, self.config.style_usage)?;
+        let usage_text = self.render_usage_text(&usage);
+        console.print(&usage_text, None, None, None, false, "\n")?;
 
         self.render_help_text(console, group.command.help.as_deref(), group.command.deprecated.as_deref())?;
 
@@ -231,16 +234,27 @@ impl RichHelpRenderer {
         if let Some(help_text) = help {
             if !help_text.trim().is_empty() {
                 console.print_text("")?;
-                let decorated = if let Some(dep) = deprecated {
+                let mut decorated = help_text.to_string();
+                if let Some(dep) = deprecated {
                     if dep.is_empty() {
-                        format!("{}  (DEPRECATED)", help_text)
+                        decorated = format!("{} {}", decorated, self.config.deprecated_string);
                     } else {
-                        format!("{}  (DEPRECATED: {})", help_text, dep)
+                        decorated = format!(
+                            "{} {}",
+                            decorated,
+                            self.config
+                                .deprecated_with_reason_string
+                                .replace("{}", dep)
+                        );
                     }
+                }
+                if self.config.text_markup == crate::config::TextMarkup::Markdown {
+                    let md = Markdown::new(&decorated);
+                    console.print(&md, None, None, None, false, "\n")?;
                 } else {
-                    help_text.to_string()
-                };
-                console.print(&Text::styled(&decorated, self.config.style_helptext), None, None, None, false, "\n")?;
+                    let help_text = self.render_help_text_block(&decorated, deprecated.is_some());
+                    console.print(&help_text, None, None, None, false, "\n")?;
+                }
                 rendered = true;
             }
         }
@@ -248,11 +262,14 @@ impl RichHelpRenderer {
             if let Some(dep) = deprecated {
                 console.print_text("")?;
                 let dep_msg = if dep.is_empty() {
-                    "(DEPRECATED)".to_string()
+                    self.config.deprecated_string.clone()
                 } else {
-                    format!("(DEPRECATED: {})", dep)
+                    self.config
+                        .deprecated_with_reason_string
+                        .replace("{}", dep)
                 };
-                console.print(&Text::styled(&dep_msg, self.config.style_deprecated), None, None, None, false, "\n")?;
+                let dep_text = Text::styled(&dep_msg, self.config.style_deprecated);
+                console.print(&dep_text, None, None, None, false, "\n")?;
             }
         }
         Ok(())
@@ -363,6 +380,62 @@ impl RichHelpRenderer {
             }
         }
         Console::capture_with_options(options)
+    }
+
+    fn render_usage_text(&self, usage: &str) -> Text {
+        let mut text = Text::styled(usage, self.config.style_usage);
+        let prefix = "Usage: ";
+        if usage.starts_with(prefix) {
+            let start = prefix.len();
+            let end = usage[start..]
+                .find(' ')
+                .map(|idx| start + idx)
+                .unwrap_or_else(|| usage.len());
+            if start < end {
+                text.stylize(start, end, self.config.style_usage_command);
+            }
+        }
+        text
+    }
+
+    fn render_help_text_block(&self, text: &str, has_deprecated: bool) -> Text {
+        match self.config.text_markup {
+            crate::config::TextMarkup::Markdown => Text::plain(text),
+            crate::config::TextMarkup::Rich => {
+                let emojis = self.config.text_emojis.unwrap_or(true);
+                let mut rendered = Text::from_markup(text, emojis).unwrap_or_else(|_| Text::plain(text));
+                self.apply_help_styles(&mut rendered, text, has_deprecated, true);
+                rendered
+            }
+            crate::config::TextMarkup::Ansi => {
+                let rendered = Text::from_ansi(text);
+                rendered
+            }
+            crate::config::TextMarkup::None => {
+                let mut rendered = Text::plain(text);
+                self.apply_help_styles(&mut rendered, text, has_deprecated, true);
+                rendered
+            }
+        }
+    }
+
+    fn apply_help_styles(&self, rendered: &mut Text, raw: &str, has_deprecated: bool, style_base: bool) {
+        if style_base {
+            rendered.stylize(0, raw.len(), self.config.style_helptext);
+        }
+        if let Some(first_end) = raw.find('\n') {
+            rendered.stylize(0, first_end, self.config.style_helptext_first_line);
+        } else {
+            rendered.stylize(0, raw.len(), self.config.style_helptext_first_line);
+        }
+
+        if has_deprecated {
+            if let Some(idx) = raw.rfind(&self.config.deprecated_string) {
+                rendered.stylize(idx, raw.len(), self.config.style_deprecated);
+            } else if let Some(idx) = raw.rfind("[deprecated:") {
+                rendered.stylize(idx, raw.len(), self.config.style_deprecated);
+            }
+        }
     }
 }
 

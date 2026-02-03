@@ -38,6 +38,20 @@ impl ColorSystemMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextMarkup {
+    Ansi,
+    Rich,
+    Markdown,
+    None,
+}
+
+impl Default for TextMarkup {
+    fn default() -> Self {
+        TextMarkup::Ansi
+    }
+}
+
 /// Panel configuration for help sections.
 #[derive(Debug, Clone)]
 pub struct PanelConfig {
@@ -222,6 +236,7 @@ pub struct RichHelpConfig {
     pub append_metavars_help: Option<bool>,
     pub group_arguments_options: bool,
     pub option_envvar_first: Option<bool>,
+    pub text_markup: TextMarkup,
     pub text_emojis: Option<bool>,
     pub use_click_short_help: bool,
     pub helptext_show_aliases: bool,
@@ -369,6 +384,7 @@ impl Default for RichHelpConfig {
             append_metavars_help: None,
             group_arguments_options: false,
             option_envvar_first: None,
+            text_markup: TextMarkup::Ansi,
             text_emojis: None,
             use_click_short_help: false,
             helptext_show_aliases: true,
@@ -543,6 +559,7 @@ impl RichHelpConfig {
             "append_metavars_help" => self.append_metavars_help = value.as_bool(),
             "group_arguments_options" => if let Some(v) = value.as_bool() { self.group_arguments_options = v; },
             "option_envvar_first" => self.option_envvar_first = value.as_bool(),
+            "text_markup" => if let Some(v) = parse_text_markup(value) { self.text_markup = v; },
             "text_emojis" => self.text_emojis = value.as_bool(),
             "use_click_short_help" => if let Some(v) = value.as_bool() { self.use_click_short_help = v; },
             "helptext_show_aliases" => if let Some(v) = value.as_bool() { self.helptext_show_aliases = v; },
@@ -640,6 +657,16 @@ impl RichHelpConfigBuilder {
 
     pub fn show_arguments(mut self, show: bool) -> Self {
         self.config.show_arguments = Some(show);
+        self
+    }
+
+    pub fn text_markup(mut self, markup: TextMarkup) -> Self {
+        self.config.text_markup = markup;
+        self
+    }
+
+    pub fn text_emojis(mut self, enabled: bool) -> Self {
+        self.config.text_emojis = Some(enabled);
         self
     }
 
@@ -755,6 +782,16 @@ fn parse_color_system_mode(value: &serde_json::Value) -> Option<ColorSystemMode>
         "truecolor" => Some(ColorSystemMode::TrueColor),
         "windows" => Some(ColorSystemMode::Windows),
         "none" => Some(ColorSystemMode::None),
+        _ => None,
+    }
+}
+
+fn parse_text_markup(value: &serde_json::Value) -> Option<TextMarkup> {
+    match value.as_str()? {
+        "ansi" => Some(TextMarkup::Ansi),
+        "rich" => Some(TextMarkup::Rich),
+        "markdown" => Some(TextMarkup::Markdown),
+        "none" => Some(TextMarkup::None),
         _ => None,
     }
 }
