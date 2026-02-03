@@ -1,0 +1,9 @@
+[package]
+name = "rich_click_parity_phase3"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+click = { path = "../../../../../click-rs" }
+rich-rs = { path = "../../../../../rich-rs" }
+rich-click-rs = { path = "../../../../" }

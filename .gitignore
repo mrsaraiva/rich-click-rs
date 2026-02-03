@@ -2,5 +2,8 @@
 **/target/
 .venv/
 tests/parity/**/output/
+tests/examples/**/output/
 .DS_Store
 **/.DS_Store
+tests/parity/**/target-*/
+tests/examples/**/.venv/

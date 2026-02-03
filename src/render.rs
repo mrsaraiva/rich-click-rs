@@ -254,7 +254,7 @@ impl RichHelpRenderer {
         let mut rendered = false;
         if let Some(help_text) = help {
             if !help_text.trim().is_empty() {
-                let mut decorated = self.apply_paragraph_linebreaks(help_text);
+                let mut decorated = help_text.to_string();
                 if let Some(dep) = deprecated {
                     if dep.is_empty() {
                         decorated = format!("{} {}", decorated, self.config.deprecated_string);
@@ -269,6 +269,7 @@ impl RichHelpRenderer {
                     }
                 }
                 if self.config.text_markup == TextMarkup::Markdown {
+                    let decorated = self.apply_paragraph_linebreaks(&decorated);
                     let md = Markdown::new(&decorated);
                     self.print_with_padding(
                         console,
@@ -656,15 +657,83 @@ impl RichHelpRenderer {
     }
 
     fn apply_paragraph_linebreaks(&self, input: &str) -> String {
-        if let Some(ref breaks) = self.config.text_paragraph_linebreaks {
-            if breaks == "\n" {
-                return input.replace("\n\n", "\n");
-            }
-            if breaks != "\n\n" {
-                return input.replace("\n\n", breaks);
-            }
+        let mut text = input;
+        if let Some((before, _)) = input.split_once('\u{000c}') {
+            text = before;
         }
-        input.to_string()
+
+        if self.config.text_markup == TextMarkup::Markdown {
+            if let Some(ref breaks) = self.config.text_paragraph_linebreaks {
+                if breaks == "\n" {
+                    return text.replace("\n\n", "\n");
+                }
+                if breaks != "\n\n" {
+                    return text.replace("\n\n", breaks);
+                }
+            }
+            return text.to_string();
+        }
+
+        let joiner = self
+            .config
+            .text_paragraph_linebreaks
+            .as_deref()
+            .unwrap_or("\n");
+
+        let paragraphs = text
+            .split("\n\n")
+            .map(|para| {
+                if para.starts_with('\u{0008}') {
+                    para.replace("\u{0008}\n", "").replace('\u{0008}', "")
+                } else {
+                    para.replace('\n', " ")
+                }
+            })
+            .collect::<Vec<_>>();
+
+        paragraphs.join(joiner)
+    }
+
+    fn normalize_help_text(&self, input: &str) -> String {
+        let mut text = input;
+        if let Some((before, _)) = input.split_once('\u{000c}') {
+            text = before;
+        }
+
+        if self.config.text_markup == TextMarkup::Markdown {
+            return text.to_string();
+        }
+
+        let paragraphs = text
+            .split("\n\n")
+            .map(|para| {
+                if para.starts_with('\u{0008}') {
+                    para.replace("\u{0008}\n", "").replace('\u{0008}', "")
+                } else {
+                    para.replace('\n', " ")
+                }
+            })
+            .collect::<Vec<_>>();
+
+        paragraphs.join("\n").trim().to_string()
+    }
+
+    fn normalize_first_paragraph(&self, input: &str) -> String {
+        let mut text = input;
+        if let Some((before, _)) = input.split_once('\u{000c}') {
+            text = before;
+        }
+
+        let para = text.split("\n\n").next().unwrap_or("");
+        let normalized = if self.config.text_markup == TextMarkup::Markdown {
+            para.to_string()
+        } else if para.starts_with('\u{0008}') {
+            para.replace("\u{0008}\n", "").replace('\u{0008}', "")
+        } else {
+            para.replace('\n', " ")
+        };
+
+        normalized.trim().to_string()
     }
 
     fn print_with_padding<W: io::Write, R: rich_rs::Renderable + Send + Sync + 'static>(
@@ -747,7 +816,18 @@ impl RichHelpRenderer {
                 aliases.dedup();
                 aliases.retain(|a| a != &canonical);
 
-                let mut help = cmd.get_short_help();
+                let mut help = if self.config.use_click_short_help {
+                    cmd.get_short_help()
+                } else {
+                    let raw = if let Some(cmd) = cmd.as_any().downcast_ref::<Command>() {
+                        cmd.short_help.as_deref().or(cmd.help.as_deref())
+                    } else if let Some(group) = cmd.as_any().downcast_ref::<Group>() {
+                        group.command.short_help.as_deref().or(group.command.help.as_deref())
+                    } else {
+                        None
+                    };
+                    raw.map(|v| self.normalize_first_paragraph(v)).unwrap_or_default()
+                };
                 if self.config.helptext_show_aliases && !aliases.is_empty() {
                     let joined = aliases.join(&self.config.delimiter_comma);
                     let alias_text = self.config.helptext_aliases_string.replace("{}", &joined);
@@ -807,7 +887,12 @@ impl RichHelpRenderer {
         commands: &[CommandEntry],
     ) -> Vec<Vec<Box<dyn rich_rs::Renderable + Send + Sync>>> {
         let mut rows = Vec::new();
-        let column_types = self.config.commands_table_column_types.clone();
+        let mut column_types = self.config.commands_table_column_types.clone();
+        if column_types.iter().any(|c| c == "aliases")
+            && commands.iter().all(|entry| entry.aliases.is_empty())
+        {
+            column_types.retain(|c| c != "aliases");
+        }
 
         for entry in commands {
             let alias_str = if entry.aliases.is_empty() {
@@ -859,7 +944,17 @@ impl RichHelpRenderer {
                 }
             }
             "opt_long" => self.build_option_long(opt),
-            "opt_short" => self.build_option_list(&opt.short, self.config.style_switch),
+            "opt_short" => {
+                if opt.is_bool_flag && opt.short.len() == 2 {
+                    let mut text = Text::styled("", self.config.style_switch);
+                    text.append(&opt.short[0], Some(self.config.style_switch));
+                    text.append(&self.config.delimiter_slash, Some(self.config.style_option_help));
+                    text.append(&opt.short[1], Some(self.config.style_switch));
+                    Some(Box::new(text))
+                } else {
+                    self.build_option_list(&opt.short, self.config.style_switch)
+                }
+            }
             "opt_all" => {
                 Some(Box::new(self.build_option_all_text(opt)) as Box<_>)
             }
@@ -961,9 +1056,14 @@ impl RichHelpRenderer {
     fn build_option_help_text(&self, opt: &click::option::ClickOption) -> Text {
         let mut text = Text::styled("", self.config.style_option_help);
         let mut first = true;
+        let separator = if self.config.text_markup == TextMarkup::Markdown {
+            "\n"
+        } else {
+            " "
+        };
         for section in &self.config.options_table_help_sections {
             let piece = match section.as_str() {
-                "help" => opt.help().map(|v| v.to_string()),
+                "help" => opt.help().map(|v| self.normalize_help_text(v)),
                 "envvar" => {
                     if opt.show_envvar {
                         opt.envvar()
@@ -999,7 +1099,7 @@ impl RichHelpRenderer {
             };
             if let Some(piece) = piece {
                 if !first {
-                    text.append(" ", Some(self.config.style_option_help));
+                    text.append(separator, Some(self.config.style_option_help));
                 }
                 let style = match section.as_str() {
                     "envvar" => self.config.style_option_envvar,
@@ -1256,7 +1356,7 @@ pub fn main_rich_command(
             }
             let ctx = ContextBuilder::new().info_name(&prog_name).build();
             let help = RichHelpRenderer::new(config.clone()).render_command_help(command, &ctx);
-            println!("{}", help);
+            print!("{}", help);
             Ok(())
         }
         Err(e) => Err(e),
@@ -1308,7 +1408,7 @@ pub fn main_rich_group(group: &Group, args: Vec<String>, config: &RichHelpConfig
             }
             let ctx = ContextBuilder::new().info_name(&prog_name).build();
             let help = RichHelpRenderer::new(config.clone()).render_group_help(group, &ctx);
-            println!("{}", help);
+            print!("{}", help);
             Ok(())
         }
         Err(e) => Err(e),
