@@ -14,4 +14,4 @@ pub use render::{
     main_rich_command, main_rich_command_with_errors, main_rich_group, main_rich_group_with_errors, RichHelp,
     RichHelpRenderer,
 };
-pub use theme::ThemeError;
+pub use theme::{list_themes, ThemeError};

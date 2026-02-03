@@ -34,6 +34,20 @@ fn main() {
 }
 ```
 
+## Themes
+
+List available themes:
+
+```bash
+cargo run --bin rich-click -- --themes
+```
+
+Set a theme via env var (matches Python rich-click):
+
+```bash
+RICH_CLICK_THEME=solarized cargo run --example basic
+```
+
 ## Status
 
 This is an early scaffold focused on help rendering (usage, panels, option/command tables).

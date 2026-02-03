@@ -44,6 +44,18 @@ pub fn apply_theme(cfg: &mut RichHelpConfig, theme: &str) -> Result<(), ThemeErr
     Err(ThemeError::unknown(theme))
 }
 
+pub fn list_themes() -> Vec<&'static str> {
+    vec![
+        "default",
+        "default-box",
+        "solarized",
+        "nord",
+        "box",
+        "nu",
+        "slim",
+    ]
+}
+
 fn split_theme(theme: &str) -> (&str, &str) {
     if theme == "default" || theme == "default-box" {
         return ("default", "box");
