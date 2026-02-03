@@ -65,6 +65,35 @@ impl RichHelpRenderer {
 
         self.render_help_text(console, command.help.as_deref(), command.deprecated.as_deref())?;
 
+        if self.is_slim_theme() {
+            let options = self.collect_options(command, ctx);
+            let arguments = if self.config.show_arguments.unwrap_or(true) {
+                command
+                    .arguments
+                    .iter()
+                    .filter_map(|arg| arg.get_help_record())
+                    .filter(|(_, help)| !help.is_empty())
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            self.render_slim_sections(console, &arguments, &options, &[])?;
+            if let Some(epilog) = command.epilog.as_deref() {
+                if !epilog.is_empty() {
+                    console.print_text("")?;
+                    console.print(
+                        &Text::styled(epilog, self.config.style_helptext),
+                        None,
+                        None,
+                        None,
+                        false,
+                        "\n",
+                    )?;
+                }
+            }
+            return Ok(());
+        }
+
         let mut sections_printed = false;
 
         if self.config.show_arguments.unwrap_or(true) {
@@ -115,6 +144,37 @@ impl RichHelpRenderer {
         console.print(&usage_text, None, None, None, false, "\n")?;
 
         self.render_help_text(console, group.command.help.as_deref(), group.command.deprecated.as_deref())?;
+
+        if self.is_slim_theme() {
+            let commands = self.collect_commands(group);
+            let options = self.collect_options(&group.command, ctx);
+            let arguments = if self.config.show_arguments.unwrap_or(true) {
+                group
+                    .command
+                    .arguments
+                    .iter()
+                    .filter_map(|arg| arg.get_help_record())
+                    .filter(|(_, help)| !help.is_empty())
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            self.render_slim_sections(console, &arguments, &options, &commands)?;
+            if let Some(epilog) = group.command.epilog.as_deref() {
+                if !epilog.is_empty() {
+                    console.print_text("")?;
+                    console.print(
+                        &Text::styled(epilog, self.config.style_helptext),
+                        None,
+                        None,
+                        None,
+                        false,
+                        "\n",
+                    )?;
+                }
+            }
+            return Ok(());
+        }
 
         let mut sections_printed = false;
 
@@ -901,6 +961,97 @@ impl RichHelpRenderer {
             return None;
         }
         opt.get_metavar()
+    }
+
+    fn is_slim_theme(&self) -> bool {
+        if let Some(theme) = &self.config.theme {
+            let theme = theme.trim();
+            if theme.eq_ignore_ascii_case("slim") || theme.to_ascii_lowercase().ends_with("-slim") {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn render_slim_sections<W: io::Write>(
+        &self,
+        console: &mut Console<W>,
+        arguments: &[(String, String)],
+        options: &[click::option::ClickOption],
+        commands: &[CommandEntry],
+    ) -> io::Result<()> {
+        if !arguments.is_empty() {
+            console.print_text("")?;
+            self.render_slim_list(console, "Arguments:", arguments)?;
+        }
+        if !options.is_empty() {
+            console.print_text("")?;
+            let rows = options
+                .iter()
+                .map(|opt| {
+                    let mut left = self.slim_option_name(opt);
+                    if let Some(mv) = self.option_metavar(opt) {
+                        left.push(' ');
+                        left.push('<');
+                        left.push_str(&mv);
+                        left.push('>');
+                    }
+                    let help = self.build_option_help_text(opt).plain_text().to_string();
+                    (left, help)
+                })
+                .collect::<Vec<_>>();
+            self.render_slim_list(console, "Options:", &rows)?;
+        }
+        if !commands.is_empty() {
+            console.print_text("")?;
+            let rows = commands
+                .iter()
+                .map(|cmd| (cmd.name.clone(), cmd.help.clone()))
+                .collect::<Vec<_>>();
+            self.render_slim_list(console, "Commands:", &rows)?;
+        }
+        Ok(())
+    }
+
+    fn render_slim_list<W: io::Write>(
+        &self,
+        console: &mut Console<W>,
+        title: &str,
+        rows: &[(String, String)],
+    ) -> io::Result<()> {
+        console.print_text(title)?;
+        let max_left = rows
+            .iter()
+            .map(|(left, _)| left.chars().count())
+            .max()
+            .unwrap_or(0);
+        for (left, right) in rows {
+            if right.is_empty() {
+                console.print_text(&format!("  {}", left))?;
+            } else {
+                let pad = if max_left > left.chars().count() {
+                    max_left - left.chars().count()
+                } else {
+                    0
+                };
+                console.print_text(&format!("  {}{}  {}", left, " ".repeat(pad), right))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn slim_option_name(&self, opt: &click::option::ClickOption) -> String {
+        let mut names = Vec::new();
+        for s in &opt.short {
+            names.push(s.as_str());
+        }
+        for l in &opt.long {
+            names.push(l.as_str());
+        }
+        if opt.is_bool_flag && names.len() == 2 && opt.short.is_empty() {
+            return format!("{}{}{}", names[0], self.config.delimiter_slash, names[1]);
+        }
+        names.join(&format!("{} ", self.config.delimiter_comma))
     }
 
     fn partition_options(

@@ -353,6 +353,7 @@ fn apply_format_slim(cfg: &mut RichHelpConfig) {
     cfg.padding_usage = PaddingDimensions::from((0, 0, 1, 0));
     cfg.padding_epilog = PaddingDimensions::from((0, 0, 1, 0));
     cfg.padding_footer_text = PaddingDimensions::from((0, 0, 1, 0));
+    cfg.default_string = "[default={}]".to_string();
     cfg.options_table_column_types = vec![
         "opt_short".to_string(),
         "opt_long_metavar".to_string(),
