@@ -1,0 +1,10 @@
+                                                                                
+ Usage: cli [OPTIONS] NAME                                                      
+                                                                                
+ Say hello                                                                      
+                                                                                
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --count                 INTEGER  Number of greetings [default: 1]            │
+│ --verbose/--no-verbose           Verbose output                              │
+│ --help                           Show this message and exit.                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
