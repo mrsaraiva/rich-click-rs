@@ -10,5 +10,8 @@ pub use config::{
     ColorSystemMode, GroupConfig, PanelConfig, RichHelpConfig, RichHelpConfigBuilder, TableConfig,
     TextMarkup,
 };
-pub use render::{main_rich_command, main_rich_group, RichHelp, RichHelpRenderer};
+pub use render::{
+    main_rich_command, main_rich_command_with_errors, main_rich_group, main_rich_group_with_errors, RichHelp,
+    RichHelpRenderer,
+};
 pub use theme::ThemeError;

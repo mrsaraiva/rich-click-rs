@@ -997,6 +997,22 @@ pub fn main_rich_command(
     }
 }
 
+/// Run a command with rich help output and rich error rendering.
+pub fn main_rich_command_with_errors(
+    command: &Command,
+    args: Vec<String>,
+    config: &RichHelpConfig,
+) -> Result<(), ClickError> {
+    match main_rich_command(command, args, config) {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            let renderer = RichHelpRenderer::new(config.clone());
+            eprint!("{}", renderer.render_error(&err));
+            Err(err)
+        }
+    }
+}
+
 /// Run a group with rich help output when --help is requested.
 pub fn main_rich_group(group: &Group, args: Vec<String>, config: &RichHelpConfig) -> Result<(), ClickError> {
     let prog_name = CommandLike::name(group)
@@ -1030,6 +1046,22 @@ pub fn main_rich_group(group: &Group, args: Vec<String>, config: &RichHelpConfig
             Ok(())
         }
         Err(e) => Err(e),
+    }
+}
+
+/// Run a group with rich help output and rich error rendering.
+pub fn main_rich_group_with_errors(
+    group: &Group,
+    args: Vec<String>,
+    config: &RichHelpConfig,
+) -> Result<(), ClickError> {
+    match main_rich_group(group, args, config) {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            let renderer = RichHelpRenderer::new(config.clone());
+            eprint!("{}", renderer.render_error(&err));
+            Err(err)
+        }
     }
 }
 
