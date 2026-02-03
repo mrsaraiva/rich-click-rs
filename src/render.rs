@@ -47,6 +47,12 @@ impl RichHelpRenderer {
         console.get_captured()
     }
 
+    pub fn render_error(&self, error: &ClickError) -> String {
+        let mut console = self.create_capture_console();
+        let _ = self.render_error_into(&mut console, error);
+        console.get_captured()
+    }
+
     fn render_command_help_into<W: io::Write>(
         &self,
         console: &mut Console<W>,
@@ -216,6 +222,45 @@ impl RichHelpRenderer {
                 let dep_text = Text::styled(&dep_msg, self.config.style_deprecated);
                 console.print(&dep_text, None, None, None, false, "\n")?;
             }
+        }
+        Ok(())
+    }
+
+    fn render_error_into<W: io::Write>(
+        &self,
+        console: &mut Console<W>,
+        error: &ClickError,
+    ) -> io::Result<()> {
+        let message = if matches!(error, ClickError::Abort) {
+            self.config.aborted_text.clone()
+        } else {
+            error.format_full()
+        };
+        let body = Text::styled(&message, self.config.style_padding_errors);
+        let mut panel = Panel::new(Box::new(body))
+            .with_border_style(self.config.style_errors_panel_border)
+            .with_title_align(self.config.align_errors_panel)
+            .with_padding(self.config.padding_errors_panel);
+        if let Some(box_type) = self.config.style_errors_panel_box {
+            panel = panel.with_box(box_type);
+        }
+        let title_text = self.build_panel_title(
+            &self.config.errors_panel_title,
+            self.config.style_errors_panel_border,
+            None,
+            self.config.style_errors_panel_border,
+            false,
+        );
+        panel = panel.with_title_text(title_text);
+        console.print(&panel, None, None, None, false, "\n")?;
+
+        if let Some(ref suggestion) = self.config.errors_suggestion {
+            let text = Text::styled(suggestion, self.config.style_errors_suggestion.unwrap_or(self.config.style_option_help));
+            console.print(&text, None, None, None, false, "\n")?;
+        }
+        if let Some(ref epilogue) = self.config.errors_epilogue {
+            let text = Text::styled(epilogue, self.config.style_padding_errors);
+            console.print(&text, None, None, None, false, "\n")?;
         }
         Ok(())
     }
