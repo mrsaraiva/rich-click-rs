@@ -9,7 +9,7 @@ use click::parameter::Parameter;
 use rich_rs::markdown::Markdown;
 use rich_rs::{Column, Console, ConsoleOptions, Panel, Row, Style, Table, Text};
 
-use crate::config::RichHelpConfig;
+use crate::config::{PanelConfig, RichHelpConfig, TableConfig, TextMarkup};
 
 const VERSION_METAVAR_PREFIX: &str = "__click_version__:";
 
@@ -75,27 +75,10 @@ impl RichHelpRenderer {
             }
         }
 
-        let mut opt_records: Vec<(String, String)> = command
-            .options
-            .iter()
-            .filter_map(|opt| opt.get_help_record())
-            .collect();
-        if let Some(help_opt) = command.get_help_option(ctx) {
-            if let Some(record) = help_opt.get_help_record() {
-                opt_records.push(record);
-            }
-        }
-        if !opt_records.is_empty() {
+        let options = self.collect_options(command, ctx);
+        if !options.is_empty() {
             self.print_section_spacing(console, &mut sections_printed)?;
-            self.print_table_panel(
-                console,
-                &self.config.options_panel_title,
-                &opt_records,
-                self.config.style_option,
-                self.config.style_option_help,
-                &self.config.panel_options,
-                &self.config.table_options,
-            )?;
+            self.print_options_panel(console, &options)?;
         }
 
         if let Some(epilog) = command.epilog.as_deref() {
@@ -122,46 +105,9 @@ impl RichHelpRenderer {
 
         let mut sections_printed = false;
 
-        let mut commands = Vec::new();
-        if self.config.show_commands.unwrap_or(true) {
-            for name in group.list_commands() {
-                if let Some(cmd) = group.get_command(name) {
-                    if cmd.is_hidden() {
-                        continue;
-                    }
-                    let mut help = cmd.get_short_help();
-                    if self.config.helptext_show_aliases {
-                        if let Some(aliases) = self.config.command_aliases.get(name) {
-                            if !aliases.is_empty() {
-                                let joined = aliases.join(&self.config.delimiter_comma);
-                                let alias_text = self
-                                    .config
-                                    .helptext_aliases_string
-                                    .replace("{}", &joined);
-                                if help.is_empty() {
-                                    help = alias_text;
-                                } else {
-                                    help = format!("{}  {}", help, alias_text);
-                                }
-                            }
-                        }
-                    }
-                    commands.push((name.to_string(), help));
-                }
-            }
-        }
+        let commands = self.collect_commands(group);
 
-        let mut options: Vec<(String, String)> = group
-            .command
-            .options
-            .iter()
-            .filter_map(|opt| opt.get_help_record())
-            .collect();
-        if let Some(help_opt) = group.command.get_help_option(ctx) {
-            if let Some(record) = help_opt.get_help_record() {
-                options.push(record);
-            }
-        }
+        let options = self.collect_options(&group.command, ctx);
 
         let mut arguments = Vec::new();
         if self.config.show_arguments.unwrap_or(true) {
@@ -177,15 +123,7 @@ impl RichHelpRenderer {
         if self.config.commands_before_options {
             if !commands.is_empty() {
                 self.print_section_spacing(console, &mut sections_printed)?;
-                self.print_table_panel(
-                    console,
-                    &self.config.commands_panel_title,
-                    &commands,
-                    self.config.style_command,
-                    self.config.style_command_help,
-                    &self.config.panel_commands,
-                    &self.config.table_commands,
-                )?;
+            self.print_commands_panel(console, &commands)?;
             }
         }
 
@@ -204,29 +142,13 @@ impl RichHelpRenderer {
 
         if !options.is_empty() {
             self.print_section_spacing(console, &mut sections_printed)?;
-            self.print_table_panel(
-                console,
-                &self.config.options_panel_title,
-                &options,
-                self.config.style_option,
-                self.config.style_option_help,
-                &self.config.panel_options,
-                &self.config.table_options,
-            )?;
+            self.print_options_panel(console, &options)?;
         }
 
         if !self.config.commands_before_options {
             if !commands.is_empty() {
                 self.print_section_spacing(console, &mut sections_printed)?;
-                self.print_table_panel(
-                    console,
-                    &self.config.commands_panel_title,
-                    &commands,
-                    self.config.style_command,
-                    self.config.style_command_help,
-                    &self.config.panel_commands,
-                    &self.config.table_commands,
-                )?;
+                self.print_commands_panel(console, &commands)?;
             }
         }
 
@@ -264,7 +186,7 @@ impl RichHelpRenderer {
                         );
                     }
                 }
-                if self.config.text_markup == crate::config::TextMarkup::Markdown {
+                if self.config.text_markup == TextMarkup::Markdown {
                     let md = Markdown::new(&decorated);
                     console.print(&md, None, None, None, false, "\n")?;
                 } else {
@@ -305,6 +227,54 @@ impl RichHelpRenderer {
         Ok(())
     }
 
+    fn print_options_panel<W: io::Write>(
+        &self,
+        console: &mut Console<W>,
+        options: &[click::option::ClickOption],
+    ) -> io::Result<()> {
+        let rows = self.build_option_rows(options);
+        if rows.is_empty() {
+            return Ok(());
+        }
+        let table = self.build_table_from_rows(
+            rows,
+            &self.config.table_options,
+            None,
+        );
+        let panel = self.build_panel(
+            &self.config.options_panel_title,
+            table,
+            &self.config.panel_options,
+            None,
+            self.config.style_options_panel_help_style,
+        );
+        console.print(&panel, None, None, None, false, "\n")
+    }
+
+    fn print_commands_panel<W: io::Write>(
+        &self,
+        console: &mut Console<W>,
+        commands: &[(String, String)],
+    ) -> io::Result<()> {
+        let rows = self.build_command_rows(commands);
+        if rows.is_empty() {
+            return Ok(());
+        }
+        let table = self.build_table_from_rows(
+            rows,
+            &self.config.table_commands,
+            self.config.style_commands_table_column_width_ratio,
+        );
+        let panel = self.build_panel(
+            &self.config.commands_panel_title,
+            table,
+            &self.config.panel_commands,
+            None,
+            self.config.style_commands_panel_help_style,
+        );
+        console.print(&panel, None, None, None, false, "\n")
+    }
+
     fn print_table_panel<W: io::Write>(
         &self,
         console: &mut Console<W>,
@@ -312,20 +282,28 @@ impl RichHelpRenderer {
         records: &[(String, String)],
         key_style: Style,
         value_style: Style,
-        panel_cfg: &crate::config::PanelConfig,
-        table_cfg: &crate::config::TableConfig,
+        panel_cfg: &PanelConfig,
+        table_cfg: &TableConfig,
     ) -> io::Result<()> {
-        let table = self.build_table(records, key_style, value_style, table_cfg);
-        let panel = self.build_panel(title, table, panel_cfg);
+        let rows = records
+            .iter()
+            .map(|(left, right)| {
+                vec![
+                    Box::new(Text::styled(left, key_style)) as Box<dyn rich_rs::Renderable + Send + Sync>,
+                    Box::new(Text::styled(right, value_style)) as Box<dyn rich_rs::Renderable + Send + Sync>,
+                ]
+            })
+            .collect::<Vec<_>>();
+        let table = self.build_table_from_rows(rows, table_cfg, None);
+        let panel = self.build_panel(title, table, panel_cfg, None, self.config.style_options_panel_help_style);
         console.print(&panel, None, None, None, false, "\n")
     }
 
-    fn build_table(
+    fn build_table_from_rows(
         &self,
-        records: &[(String, String)],
-        key_style: Style,
-        value_style: Style,
-        table_cfg: &crate::config::TableConfig,
+        rows: Vec<Vec<Box<dyn rich_rs::Renderable + Send + Sync>>>,
+        table_cfg: &TableConfig,
+        ratios: Option<(Option<usize>, Option<usize>)>,
     ) -> Table {
         let mut table = Table::grid()
             .with_padding(table_cfg.padding.0, table_cfg.padding.1)
@@ -343,32 +321,37 @@ impl RichHelpRenderer {
             table = table.with_row_styles(table_cfg.row_styles.clone());
         }
 
-        let mut key_column = Column::default();
-        key_column.style = key_style;
-        let mut value_column = Column::default();
-        value_column.style = value_style;
-        table.add_column(key_column);
-        table.add_column(value_column);
+        if let Some(first_row) = rows.first() {
+            for idx in 0..first_row.len() {
+                let mut col = Column::default();
+                if let Some((left, right)) = ratios {
+                    if idx == 0 {
+                        col.ratio = left;
+                    } else if idx == 1 {
+                        col.ratio = right;
+                    }
+                }
+                table.add_column(col);
+            }
+        }
 
-        for (left, right) in records {
-            let left_text = Text::styled(left, key_style);
-            let right_text = if right.is_empty() {
-                Text::plain("")
-            } else {
-                Text::styled(right, value_style)
-            };
-            let row = Row::new(vec![
-                Box::new(left_text) as Box<dyn rich_rs::Renderable + Send + Sync>,
-                Box::new(right_text) as Box<dyn rich_rs::Renderable + Send + Sync>,
-            ]);
+        for row_cells in rows {
+            let row = Row::new(row_cells);
             table.add_row(row);
         }
 
         table
     }
 
-    fn build_panel(&self, title: &str, table: Table, panel_cfg: &crate::config::PanelConfig) -> Panel {
-        let title_text = Text::styled(title, panel_cfg.title_style);
+    fn build_panel(
+        &self,
+        title: &str,
+        table: Table,
+        panel_cfg: &PanelConfig,
+        help_text: Option<&str>,
+        help_style: Style,
+    ) -> Panel {
+        let title_text = self.build_panel_title(title, panel_cfg.title_style, help_text, help_style);
         Panel::new(Box::new(table))
             .with_box(panel_cfg.box_type)
             .with_title_text(title_text)
@@ -417,19 +400,16 @@ impl RichHelpRenderer {
     fn render_help_text_block(&self, text: &str, has_deprecated: bool) -> Text {
         let source = self.apply_paragraph_linebreaks(text);
         match self.config.text_markup {
-            crate::config::TextMarkup::Markdown => Text::plain(text),
-            crate::config::TextMarkup::Rich => {
+            TextMarkup::Markdown => Text::plain(text),
+            TextMarkup::Rich => {
                 let emojis = self.config.text_emojis.unwrap_or(true);
                 let mut rendered =
                     Text::from_markup(&source, emojis).unwrap_or_else(|_| Text::plain(&source));
                 self.apply_help_styles(&mut rendered, &source, has_deprecated, true);
                 rendered
             }
-            crate::config::TextMarkup::Ansi => {
-                let rendered = Text::from_ansi(&source);
-                rendered
-            }
-            crate::config::TextMarkup::None => {
+            TextMarkup::Ansi => Text::from_ansi(&source),
+            TextMarkup::None => {
                 let mut rendered = Text::plain(&source);
                 self.apply_help_styles(&mut rendered, &source, has_deprecated, true);
                 rendered
@@ -466,6 +446,293 @@ impl RichHelpRenderer {
             }
         }
         input.to_string()
+    }
+
+    fn build_panel_title(&self, title: &str, style: Style, help: Option<&str>, help_style: Style) -> Text {
+        let formatted = self.config.panel_title_string.replace("{}", title);
+        let padding = self.config.panel_title_padding;
+        let mut padded = String::new();
+        for _ in 0..padding {
+            padded.push(' ');
+        }
+        padded.push_str(&formatted);
+        for _ in 0..padding {
+            padded.push(' ');
+        }
+        if self.config.panel_inline_help_in_title {
+            if let Some(help_text) = help {
+                let mut text = Text::styled(padded, style);
+                text.append(&self.config.panel_inline_help_delimiter, Some(self.config.style_option_help));
+                text.append(help_text, Some(help_style));
+                return text;
+            }
+        }
+        Text::styled(padded, style)
+    }
+
+    fn collect_options(&self, command: &Command, ctx: &Context) -> Vec<click::option::ClickOption> {
+        let mut options: Vec<click::option::ClickOption> = command
+            .options
+            .iter()
+            .filter(|opt| !opt.hidden())
+            .cloned()
+            .collect();
+        if let Some(help_opt) = command.get_help_option(ctx) {
+            if !help_opt.hidden() {
+                options.push(help_opt);
+            }
+        }
+        options
+    }
+
+    fn collect_commands(&self, group: &Group) -> Vec<(String, String)> {
+        let mut commands = Vec::new();
+        if self.config.show_commands.unwrap_or(true) {
+            for name in group.list_commands() {
+                if let Some(cmd) = group.get_command(name) {
+                    if cmd.is_hidden() {
+                        continue;
+                    }
+                    let mut help = cmd.get_short_help();
+                    if self.config.helptext_show_aliases {
+                        if let Some(aliases) = self.config.command_aliases.get(name) {
+                            if !aliases.is_empty() {
+                                let joined = aliases.join(&self.config.delimiter_comma);
+                                let alias_text = self
+                                    .config
+                                    .helptext_aliases_string
+                                    .replace("{}", &joined);
+                                if help.is_empty() {
+                                    help = alias_text;
+                                } else {
+                                    help = format!("{}  {}", help, alias_text);
+                                }
+                            }
+                        }
+                    }
+                    commands.push((name.to_string(), help));
+                }
+            }
+        }
+        commands
+    }
+
+    fn build_option_rows(
+        &self,
+        options: &[click::option::ClickOption],
+    ) -> Vec<Vec<Box<dyn rich_rs::Renderable + Send + Sync>>> {
+        let mut rows = Vec::new();
+        let column_types = self.config.options_table_column_types.clone();
+
+        for opt in options {
+            let mut row = Vec::new();
+            for col in &column_types {
+                let cell = self.build_option_column(opt, col);
+                if let Some(renderable) = cell {
+                    row.push(renderable);
+                } else {
+                    row.push(Box::new(Text::plain("")) as Box<dyn rich_rs::Renderable + Send + Sync>);
+                }
+            }
+            rows.push(row);
+        }
+
+        rows
+    }
+
+    fn build_command_rows(
+        &self,
+        commands: &[(String, String)],
+    ) -> Vec<Vec<Box<dyn rich_rs::Renderable + Send + Sync>>> {
+        let mut rows = Vec::new();
+        let column_types = self.config.commands_table_column_types.clone();
+
+        for (name, help) in commands {
+            let aliases = self
+                .config
+                .command_aliases
+                .get(name)
+                .cloned()
+                .unwrap_or_default();
+            let alias_str = if aliases.is_empty() {
+                String::new()
+            } else {
+                aliases.join(&self.config.delimiter_comma)
+            };
+
+            let mut row = Vec::new();
+            for col in &column_types {
+                let cell: Box<dyn rich_rs::Renderable + Send + Sync> = match col.as_str() {
+                    "name" => Box::new(Text::styled(name, self.config.style_command)),
+                    "aliases" => Box::new(Text::styled(&alias_str, self.config.style_command_aliases)),
+                    "name_with_aliases" => {
+                        if alias_str.is_empty() {
+                            Box::new(Text::styled(name, self.config.style_command))
+                        } else {
+                            let mut t = Text::styled(name, self.config.style_command);
+                            t.append(&self.config.delimiter_slash, Some(self.config.style_option_help));
+                            t.append(&alias_str, Some(self.config.style_command_aliases));
+                            Box::new(t)
+                        }
+                    }
+                    "help" => Box::new(Text::styled(help, self.config.style_command_help)),
+                    _ => Box::new(Text::plain("")),
+                };
+                row.push(cell);
+            }
+            rows.push(row);
+        }
+
+        rows
+    }
+
+    fn build_option_column(
+        &self,
+        opt: &click::option::ClickOption,
+        column: &str,
+    ) -> Option<Box<dyn rich_rs::Renderable + Send + Sync>> {
+        match column {
+            "required" => {
+                if opt.required() {
+                    Some(Box::new(Text::styled(
+                        &self.config.required_short_string,
+                        self.config.style_required_short,
+                    )))
+                } else {
+                    None
+                }
+            }
+            "opt_long" => self.build_option_list(&opt.long, self.config.style_option),
+            "opt_short" => self.build_option_list(&opt.short, self.config.style_switch),
+            "opt_all" => {
+                Some(Box::new(self.build_option_all_text(opt)) as Box<_>)
+            }
+            "opt_long_metavar" => self.build_option_with_metavar(&opt.long, opt),
+            "opt_all_metavar" => {
+                let mut text = self.build_option_all_text(opt);
+                if let Some(mv) = opt.get_metavar() {
+                    text.append(" ", Some(self.config.style_option_help));
+                    text.append(mv, Some(self.config.style_metavar));
+                }
+                Some(Box::new(text))
+            }
+            "metavar" | "metavar_short" => {
+                opt.get_metavar()
+                    .map(|mv| Box::new(Text::styled(mv, self.config.style_metavar)) as Box<_>)
+            }
+            "help" => Some(Box::new(self.build_option_help_text(opt)) as Box<_>),
+            _ => None,
+        }
+    }
+
+    fn build_option_list(
+        &self,
+        items: &[String],
+        style: Style,
+    ) -> Option<Box<dyn rich_rs::Renderable + Send + Sync>> {
+        if items.is_empty() {
+            return None;
+        }
+        let mut text = Text::styled("", style);
+        for (idx, item) in items.iter().enumerate() {
+            if idx > 0 {
+                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+            }
+            text.append(item, Some(style));
+        }
+        Some(Box::new(text))
+    }
+
+    fn build_option_all_text(&self, opt: &click::option::ClickOption) -> Text {
+        let mut text = Text::styled("", self.config.style_option);
+        let mut first = true;
+        for item in &opt.short {
+            if !first {
+                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+            }
+            text.append(item, Some(self.config.style_switch));
+            first = false;
+        }
+        for item in &opt.long {
+            if !first {
+                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+            }
+            text.append(item, Some(self.config.style_option));
+            first = false;
+        }
+        text
+    }
+
+    fn build_option_with_metavar(
+        &self,
+        items: &[String],
+        opt: &click::option::ClickOption,
+    ) -> Option<Box<dyn rich_rs::Renderable + Send + Sync>> {
+        if items.is_empty() {
+            return None;
+        }
+        let mut text = Text::styled("", self.config.style_option);
+        for (idx, item) in items.iter().enumerate() {
+            if idx > 0 {
+                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+            }
+            text.append(item, Some(self.config.style_option));
+        }
+        if let Some(mv) = opt.get_metavar() {
+            text.append(" ", Some(self.config.style_option_help));
+            text.append(mv, Some(self.config.style_metavar));
+        }
+        Some(Box::new(text))
+    }
+
+    fn build_option_help_text(&self, opt: &click::option::ClickOption) -> Text {
+        let mut text = Text::styled("", self.config.style_option_help);
+        let mut first = true;
+        for section in &self.config.options_table_help_sections {
+            let piece = match section.as_str() {
+                "help" => opt.help().map(|v| v.to_string()),
+                "envvar" => {
+                    if opt.show_envvar {
+                        opt.envvar()
+                            .map(|vars| self.config.envvar_string.replace("{}", &vars.join(&self.config.delimiter_comma)))
+                    } else {
+                        None
+                    }
+                }
+                "default" => {
+                    if opt.show_default {
+                        opt.default
+                            .as_ref()
+                            .map(|v| self.config.default_string.replace("{}", v))
+                    } else {
+                        None
+                    }
+                }
+                "required" => {
+                    if opt.required() {
+                        Some(self.config.required_long_string.clone())
+                    } else {
+                        None
+                    }
+                }
+                "metavar" => opt.get_metavar().map(|mv| self.config.append_metavars_help_string.replace("{}", &mv)),
+                _ => None,
+            };
+            if let Some(piece) = piece {
+                if !first {
+                    text.append(" ", Some(self.config.style_option_help));
+                }
+                let style = match section.as_str() {
+                    "envvar" => self.config.style_option_envvar,
+                    "default" => self.config.style_option_default,
+                    "required" => self.config.style_required_long,
+                    _ => self.config.style_option_help,
+                };
+                text.append(piece, Some(style));
+                first = false;
+            }
+        }
+        text
     }
 }
 

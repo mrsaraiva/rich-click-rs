@@ -177,6 +177,7 @@ pub struct RichHelpConfig {
     pub style_commands_table_box: Option<rich_rs::r#box::Box>,
     pub style_commands_table_row_styles: Vec<Style>,
     pub style_commands_table_border_style: Style,
+    pub style_commands_table_column_width_ratio: Option<(Option<usize>, Option<usize>)>,
     pub style_errors_panel_border: Style,
     pub style_errors_panel_box: Option<rich_rs::r#box::Box>,
     pub align_errors_panel: AlignMethod,
@@ -320,6 +321,7 @@ impl Default for RichHelpConfig {
             style_commands_table_box: None,
             style_commands_table_row_styles: Vec::new(),
             style_commands_table_border_style: Style::default(),
+            style_commands_table_column_width_ratio: None,
             style_errors_panel_border: Style::default(),
             style_errors_panel_box: None,
             align_errors_panel: AlignMethod::Left,
@@ -532,6 +534,7 @@ impl RichHelpConfig {
             "style_aborted" => if let Some(v) = value.as_str() { self.style_aborted = parse_style(v); },
             "style_options_table_border_style" => if let Some(v) = value.as_str() { self.style_options_table_border_style = parse_style(v); },
             "style_commands_table_border_style" => if let Some(v) = value.as_str() { self.style_commands_table_border_style = parse_style(v); },
+            "style_commands_table_column_width_ratio" => if let Some(v) = parse_ratio_pair(value) { self.style_commands_table_column_width_ratio = Some(v); },
             "style_options_table_show_lines" => if let Some(v) = value.as_bool() { self.style_options_table_show_lines = v; },
             "style_commands_table_show_lines" => if let Some(v) = value.as_bool() { self.style_commands_table_show_lines = v; },
             "style_options_table_leading" => if let Some(v) = value.as_u64() { self.style_options_table_leading = v as usize; },
@@ -798,6 +801,16 @@ fn parse_padding_value(value: &serde_json::Value) -> Option<PaddingDimensions> {
         }
         _ => None,
     }
+}
+
+fn parse_ratio_pair(value: &serde_json::Value) -> Option<(Option<usize>, Option<usize>)> {
+    let list = value.as_array()?;
+    if list.len() != 2 {
+        return None;
+    }
+    let left = list[0].as_u64().map(|v| v as usize);
+    let right = list[1].as_u64().map(|v| v as usize);
+    Some((left, right))
 }
 
 fn parse_box_value(value: &serde_json::Value) -> Option<rich_rs::r#box::Box> {
