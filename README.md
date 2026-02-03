@@ -16,7 +16,7 @@ rich-click-rs = { path = "../rich-click-rs" }
 
 ```rust
 use click::Command;
-use rich_click_rs::{RichHelp, RichHelpConfig};
+use rich_click_rs::{RichHelp, RichHelpConfig, RichMainExt};
 
 fn main() {
     let cmd = Command::new("demo")
@@ -31,6 +31,22 @@ fn main() {
     let ctx = click::ContextBuilder::new().info_name("demo").build();
     let help = cmd.get_rich_help_with(&ctx, &RichHelpConfig::default());
     println!("{}", help);
+
+    // Or run directly with rich help (and rich errors):
+    // cmd.main_rich_with_errors().unwrap();
+}
+```
+
+## Macros
+
+For a tiny `main.rs`, use macros:
+
+```rust
+use rich_click_rs::rich_main_with_errors;
+
+fn main() {
+    let cmd = click::Command::new("demo").build();
+    rich_main_with_errors!(cmd).unwrap();
 }
 ```
 
