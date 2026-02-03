@@ -7,7 +7,7 @@ use click::error::ClickError;
 use click::group::{CommandLike, Group};
 use click::parameter::Parameter;
 use rich_rs::markdown::Markdown;
-use rich_rs::{Column, Console, ConsoleOptions, Panel, Row, Style, Table, Text};
+use rich_rs::{Column, Console, ConsoleOptions, Padding, PaddingDimensions, Panel, Row, Style, Table, Text};
 
 use crate::config::{PanelConfig, RichHelpConfig, TableConfig, TextMarkup};
 
@@ -61,7 +61,12 @@ impl RichHelpRenderer {
     ) -> io::Result<()> {
         let usage = command.get_usage(ctx);
         let usage_text = self.render_usage_text(&usage);
-        console.print(&usage_text, None, None, None, false, "\n")?;
+        self.print_with_padding(
+            console,
+            usage_text,
+            self.config.padding_usage,
+            self.config.style_padding_usage,
+        )?;
 
         self.render_help_text(console, command.help.as_deref(), command.deprecated.as_deref())?;
 
@@ -141,7 +146,12 @@ impl RichHelpRenderer {
     ) -> io::Result<()> {
         let usage = CommandLike::get_usage(group, ctx);
         let usage_text = self.render_usage_text(&usage);
-        console.print(&usage_text, None, None, None, false, "\n")?;
+        self.print_with_padding(
+            console,
+            usage_text,
+            self.config.padding_usage,
+            self.config.style_padding_usage,
+        )?;
 
         self.render_help_text(console, group.command.help.as_deref(), group.command.deprecated.as_deref())?;
 
@@ -244,7 +254,6 @@ impl RichHelpRenderer {
         let mut rendered = false;
         if let Some(help_text) = help {
             if !help_text.trim().is_empty() {
-                console.print_text("")?;
                 let mut decorated = self.apply_paragraph_linebreaks(help_text);
                 if let Some(dep) = deprecated {
                     if dep.is_empty() {
@@ -261,17 +270,26 @@ impl RichHelpRenderer {
                 }
                 if self.config.text_markup == TextMarkup::Markdown {
                     let md = Markdown::new(&decorated);
-                    console.print(&md, None, None, None, false, "\n")?;
+                    self.print_with_padding(
+                        console,
+                        md,
+                        self.config.padding_helptext,
+                        self.config.style_padding_helptext,
+                    )?;
                 } else {
                     let help_text = self.render_help_text_block(&decorated, deprecated.is_some());
-                    console.print(&help_text, None, None, None, false, "\n")?;
+                    self.print_with_padding(
+                        console,
+                        help_text,
+                        self.config.padding_helptext,
+                        self.config.style_padding_helptext,
+                    )?;
                 }
                 rendered = true;
             }
         }
         if !rendered {
             if let Some(dep) = deprecated {
-                console.print_text("")?;
                 let dep_msg = if dep.is_empty() {
                     self.config.deprecated_string.clone()
                 } else {
@@ -280,7 +298,12 @@ impl RichHelpRenderer {
                         .replace("{}", dep)
                 };
                 let dep_text = Text::styled(&dep_msg, self.config.style_deprecated);
-                console.print(&dep_text, None, None, None, false, "\n")?;
+                self.print_with_padding(
+                    console,
+                    dep_text,
+                    self.config.padding_helptext,
+                    self.config.style_padding_helptext,
+                )?;
             }
         }
         Ok(())
@@ -312,7 +335,7 @@ impl RichHelpRenderer {
             false,
         );
         panel = panel.with_title_text(title_text);
-        console.print(&panel, None, None, None, false, "\n")?;
+        console.print(&panel, None, None, None, false, "")?;
 
         if let Some(ref suggestion) = self.config.errors_suggestion {
             let text = Text::styled(suggestion, self.config.style_errors_suggestion.unwrap_or(self.config.style_option_help));
@@ -327,13 +350,10 @@ impl RichHelpRenderer {
 
     fn print_section_spacing<W: io::Write>(
         &self,
-        console: &mut Console<W>,
+        _console: &mut Console<W>,
         printed_any: &mut bool,
     ) -> io::Result<()> {
-        if *printed_any {
-            console.print_text("")?;
-        } else {
-            console.print_text("")?;
+        if !*printed_any {
             *printed_any = true;
         }
         Ok(())
@@ -392,7 +412,7 @@ impl RichHelpRenderer {
         }
 
         for panel in panels {
-            console.print(&panel, None, None, None, false, "\n")?;
+            console.print(&panel, None, None, None, false, "")?;
         }
         Ok(())
     }
@@ -458,7 +478,7 @@ impl RichHelpRenderer {
         }
 
         for panel in panels {
-            console.print(&panel, None, None, None, false, "\n")?;
+            console.print(&panel, None, None, None, false, "")?;
         }
         Ok(())
     }
@@ -492,7 +512,7 @@ impl RichHelpRenderer {
             None,
             self.config.panel_inline_help_in_title,
         );
-        console.print(&panel, None, None, None, false, "\n")
+        console.print(&panel, None, None, None, false, "")
     }
 
     fn build_table_from_rows(
@@ -647,6 +667,17 @@ impl RichHelpRenderer {
         input.to_string()
     }
 
+    fn print_with_padding<W: io::Write, R: rich_rs::Renderable + Send + Sync + 'static>(
+        &self,
+        console: &mut Console<W>,
+        renderable: R,
+        padding: PaddingDimensions,
+        style: Style,
+    ) -> io::Result<()> {
+        let padded = Padding::new(Box::new(renderable), padding).with_style(style);
+        console.print(&padded, None, None, None, false, "")
+    }
+
     fn build_panel_title(
         &self,
         title: &str,
@@ -742,7 +773,10 @@ impl RichHelpRenderer {
         options: &[click::option::ClickOption],
     ) -> Vec<Vec<Box<dyn rich_rs::Renderable + Send + Sync>>> {
         let mut rows = Vec::new();
-        let column_types = self.config.options_table_column_types.clone();
+        let mut column_types = self.config.options_table_column_types.clone();
+        if column_types.iter().any(|c| c == "required") && !options.iter().any(|opt| opt.required()) {
+            column_types.retain(|c| c != "required");
+        }
 
         for opt in options {
             let mut row = Vec::new();
@@ -980,12 +1014,15 @@ impl RichHelpRenderer {
         options: &[click::option::ClickOption],
         commands: &[CommandEntry],
     ) -> io::Result<()> {
+        let mut printed_any = false;
         if !arguments.is_empty() {
-            console.print_text("")?;
             self.render_slim_list(console, "Arguments:", arguments)?;
+            printed_any = true;
         }
         if !options.is_empty() {
-            console.print_text("")?;
+            if printed_any {
+                console.print_text("")?;
+            }
             let rows = options
                 .iter()
                 .map(|opt| {
@@ -1001,14 +1038,21 @@ impl RichHelpRenderer {
                 })
                 .collect::<Vec<_>>();
             self.render_slim_list(console, "Options:", &rows)?;
+            printed_any = true;
         }
         if !commands.is_empty() {
-            console.print_text("")?;
+            if printed_any {
+                console.print_text("")?;
+            }
             let rows = commands
                 .iter()
                 .map(|cmd| (cmd.name.clone(), cmd.help.clone()))
                 .collect::<Vec<_>>();
             self.render_slim_list(console, "Commands:", &rows)?;
+            printed_any = true;
+        }
+        if printed_any {
+            console.print_text("")?;
         }
         Ok(())
     }

@@ -249,6 +249,8 @@ fn apply_format_box(cfg: &mut RichHelpConfig) {
     cfg.style_commands_table_box = None;
     cfg.style_options_table_expand = true;
     cfg.style_commands_table_expand = true;
+    cfg.style_options_table_padding = PaddingDimensions::from((0, 1));
+    cfg.style_commands_table_padding = PaddingDimensions::from((0, 1));
     cfg.style_options_panel_padding = PaddingDimensions::from((0, 1));
     cfg.style_commands_panel_padding = PaddingDimensions::from((0, 1));
     cfg.panel_inline_help_in_title = false;
@@ -283,7 +285,7 @@ fn apply_format_box(cfg: &mut RichHelpConfig) {
     cfg.padding_usage = PaddingDimensions::from(1);
     cfg.delimiter_comma = ",".to_string();
     cfg.delimiter_slash = "/".to_string();
-    cfg.panel_title_padding = 1;
+    cfg.panel_title_padding = 0;
     cfg.padding_epilog = PaddingDimensions::from(1);
     cfg.padding_footer_text = PaddingDimensions::from(1);
     cfg.append_metavars_help_string = "({})".to_string();
@@ -297,6 +299,8 @@ fn apply_format_nu(cfg: &mut RichHelpConfig) {
     cfg.style_commands_table_box = None;
     cfg.style_options_table_expand = false;
     cfg.style_commands_table_expand = false;
+    cfg.style_options_table_padding = PaddingDimensions::from((0, 1));
+    cfg.style_commands_table_padding = PaddingDimensions::from((0, 1));
     cfg.panel_title_string = "{}".to_string();
     cfg.style_options_panel_padding = PaddingDimensions::from(0);
     cfg.style_commands_panel_padding = PaddingDimensions::from(0);
@@ -314,7 +318,7 @@ fn apply_format_nu(cfg: &mut RichHelpConfig) {
     cfg.padding_usage = PaddingDimensions::from((0, 1, 1, 1));
     cfg.delimiter_comma = ",".to_string();
     cfg.delimiter_slash = "/".to_string();
-    cfg.panel_title_padding = 1;
+    cfg.panel_title_padding = 0;
     cfg.options_table_column_types = vec![
         "required".to_string(),
         "opt_long".to_string(),
