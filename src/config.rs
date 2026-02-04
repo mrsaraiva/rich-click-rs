@@ -86,6 +86,7 @@ pub struct TableConfig {
     pub leading: usize,
     pub pad_edge: bool,
     pub padding: (usize, usize),
+    pub collapse_padding: bool,
     pub expand: bool,
     pub box_type: Option<rich_rs::r#box::Box>,
     pub row_styles: Vec<Style>,
@@ -99,6 +100,7 @@ impl Default for TableConfig {
             leading: 0,
             pad_edge: false,
             padding: (0, 1),
+            collapse_padding: false,
             expand: false,
             box_type: None,
             row_styles: Vec::new(),
@@ -156,6 +158,7 @@ pub struct RichHelpConfig {
     pub style_options_table_leading: usize,
     pub style_options_table_pad_edge: bool,
     pub style_options_table_padding: PaddingDimensions,
+    pub style_options_table_collapse_padding: bool,
     pub style_options_table_expand: bool,
     pub style_options_table_box: Option<rich_rs::r#box::Box>,
     pub style_options_table_row_styles: Vec<Style>,
@@ -173,6 +176,7 @@ pub struct RichHelpConfig {
     pub style_commands_table_leading: usize,
     pub style_commands_table_pad_edge: bool,
     pub style_commands_table_padding: PaddingDimensions,
+    pub style_commands_table_collapse_padding: bool,
     pub style_commands_table_expand: bool,
     pub style_commands_table_box: Option<rich_rs::r#box::Box>,
     pub style_commands_table_row_styles: Vec<Style>,
@@ -312,6 +316,7 @@ impl Default for RichHelpConfig {
             style_options_table_leading: 0,
             style_options_table_pad_edge: false,
             style_options_table_padding: PaddingDimensions::from((0, 1)),
+            style_options_table_collapse_padding: false,
             style_options_table_expand: true,
             style_options_table_box: None,
             style_options_table_row_styles: Vec::new(),
@@ -329,6 +334,7 @@ impl Default for RichHelpConfig {
             style_commands_table_leading: 0,
             style_commands_table_pad_edge: false,
             style_commands_table_padding: PaddingDimensions::from((0, 1)),
+            style_commands_table_collapse_padding: false,
             style_commands_table_expand: true,
             style_commands_table_box: None,
             style_commands_table_row_styles: Vec::new(),
@@ -555,6 +561,8 @@ impl RichHelpConfig {
             "style_commands_table_leading" => if let Some(v) = value.as_u64() { self.style_commands_table_leading = v as usize; },
             "style_options_table_pad_edge" => if let Some(v) = value.as_bool() { self.style_options_table_pad_edge = v; },
             "style_commands_table_pad_edge" => if let Some(v) = value.as_bool() { self.style_commands_table_pad_edge = v; },
+            "style_options_table_collapse_padding" => if let Some(v) = value.as_bool() { self.style_options_table_collapse_padding = v; },
+            "style_commands_table_collapse_padding" => if let Some(v) = value.as_bool() { self.style_commands_table_collapse_padding = v; },
             "style_options_table_expand" => if let Some(v) = value.as_bool() { self.style_options_table_expand = v; },
             "style_commands_table_expand" => if let Some(v) = value.as_bool() { self.style_commands_table_expand = v; },
             "style_options_table_box" => self.style_options_table_box = parse_box_value(value),
@@ -636,6 +644,7 @@ impl RichHelpConfig {
         self.table_options.leading = self.style_options_table_leading;
         self.table_options.pad_edge = self.style_options_table_pad_edge;
         self.table_options.padding = (padding.3, padding.1);
+        self.table_options.collapse_padding = self.style_options_table_collapse_padding;
         self.table_options.expand = self.style_options_table_expand;
         self.table_options.box_type = self.style_options_table_box;
         self.table_options.border_style = self.style_options_table_border_style;
@@ -645,6 +654,7 @@ impl RichHelpConfig {
         self.table_commands.leading = self.style_commands_table_leading;
         self.table_commands.pad_edge = self.style_commands_table_pad_edge;
         self.table_commands.padding = (padding.3, padding.1);
+        self.table_commands.collapse_padding = self.style_commands_table_collapse_padding;
         self.table_commands.expand = self.style_commands_table_expand;
         self.table_commands.box_type = self.style_commands_table_box;
         self.table_commands.border_style = self.style_commands_table_border_style;

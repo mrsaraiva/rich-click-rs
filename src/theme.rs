@@ -53,6 +53,8 @@ pub fn list_themes() -> Vec<&'static str> {
         "box",
         "nu",
         "slim",
+        "modern",
+        "magenta2-modern",
     ]
 }
 
@@ -86,6 +88,10 @@ fn apply_color_theme(cfg: &mut RichHelpConfig, name: &str) -> bool {
             apply_color_nord(cfg);
             true
         }
+        "magenta2" => {
+            apply_color_magenta2(cfg);
+            true
+        }
         _ => false,
     }
 }
@@ -105,8 +111,56 @@ fn apply_format_theme(cfg: &mut RichHelpConfig, name: &str) -> bool {
             apply_format_slim(cfg);
             true
         }
+        "modern" => {
+            apply_format_modern(cfg);
+            true
+        }
         _ => false,
     }
+}
+
+fn apply_color_magenta2(cfg: &mut RichHelpConfig) {
+    cfg.style_option = parse_style("bold magenta");
+    cfg.style_option_negative = None;
+    cfg.style_argument = parse_style("magenta");
+    cfg.style_command = parse_style("bold magenta");
+    cfg.style_command_aliases = parse_style("magenta");
+    cfg.style_switch = parse_style("bold magenta");
+    cfg.style_switch_negative = None;
+    cfg.style_metavar = parse_style("magenta");
+    cfg.style_metavar_append = parse_style("dim magenta");
+    cfg.style_metavar_separator = Style::default();
+    cfg.style_range_append = None;
+    cfg.style_usage = parse_style("magenta");
+    cfg.style_usage_command = Style::default();
+    cfg.style_usage_separator = Style::default();
+    cfg.style_deprecated = parse_style("red");
+    cfg.style_options_panel_help_style = parse_style("dim");
+    cfg.style_commands_panel_help_style = parse_style("dim");
+    cfg.style_options_table_border_style = parse_style("dim magenta");
+    cfg.style_commands_table_border_style = parse_style("dim magenta");
+    cfg.style_options_panel_border = parse_style("dim magenta");
+    cfg.style_commands_panel_border = parse_style("dim magenta");
+    cfg.style_options_panel_title_style = Style::default();
+    cfg.style_commands_panel_title_style = Style::default();
+    cfg.style_required_long = parse_style("dim red");
+    cfg.style_required_short = parse_style("red");
+    cfg.style_option_help = Style::default();
+    cfg.style_command_help = Style::default();
+    cfg.style_option_default = parse_style("dim");
+    cfg.style_option_envvar = parse_style("dim magenta");
+    cfg.style_helptext_first_line = Style::default();
+    cfg.style_helptext = parse_style("dim");
+    cfg.style_header_text = Style::default();
+    cfg.style_epilog_text = Style::default();
+    cfg.style_footer_text = Style::default();
+    cfg.style_options_panel_style = Style::default();
+    cfg.style_commands_panel_style = Style::default();
+    cfg.style_padding_usage = Style::default();
+    cfg.style_padding_helptext = Style::default();
+    cfg.style_padding_epilog = Style::default();
+    cfg.style_padding_errors = Style::default();
+    cfg.style_errors_panel_border = parse_style("red");
 }
 
 fn apply_color_default(cfg: &mut RichHelpConfig) {
@@ -247,11 +301,11 @@ fn apply_format_box(cfg: &mut RichHelpConfig) {
     cfg.style_errors_panel_box = Some(ROUNDED);
     cfg.style_options_table_box = None;
     cfg.style_commands_table_box = None;
-    cfg.style_options_table_expand = false;
+    cfg.style_options_table_expand = true;
     cfg.style_commands_table_expand = true;
     cfg.style_commands_table_column_width_ratio = None;
-    cfg.style_options_table_padding = PaddingDimensions::from((0, 2, 0, 1));
-    cfg.style_commands_table_padding = PaddingDimensions::from((0, 1, 0, 2));
+    cfg.style_options_table_padding = PaddingDimensions::from((0, 1));
+    cfg.style_commands_table_padding = PaddingDimensions::from((0, 1));
     cfg.style_options_panel_padding = PaddingDimensions::from((0, 1));
     cfg.style_commands_panel_padding = PaddingDimensions::from((0, 1));
     cfg.panel_inline_help_in_title = false;
@@ -300,8 +354,8 @@ fn apply_format_nu(cfg: &mut RichHelpConfig) {
     cfg.style_commands_table_box = None;
     cfg.style_options_table_expand = false;
     cfg.style_commands_table_expand = false;
-    cfg.style_options_table_padding = PaddingDimensions::from((0, 1));
-    cfg.style_commands_table_padding = PaddingDimensions::from((0, 1));
+    cfg.style_options_table_padding = PaddingDimensions::from((0, 0));
+    cfg.style_commands_table_padding = PaddingDimensions::from((0, 0));
     cfg.panel_title_string = "{}".to_string();
     cfg.style_options_panel_padding = PaddingDimensions::from(0);
     cfg.style_commands_panel_padding = PaddingDimensions::from(0);
@@ -367,6 +421,57 @@ fn apply_format_slim(cfg: &mut RichHelpConfig) {
     cfg.commands_table_column_types = vec!["name_with_aliases".to_string(), "help".to_string()];
     cfg.options_table_help_sections = vec!["help".to_string(), "default".to_string(), "envvar".to_string()];
     cfg.commands_table_help_sections = vec!["help".to_string(), "deprecated".to_string()];
+}
+
+fn apply_format_modern(cfg: &mut RichHelpConfig) {
+    cfg.style_options_panel_box = Some(HORIZONTALS);
+    cfg.style_commands_panel_box = Some(HORIZONTALS);
+    cfg.style_errors_panel_box = Some(ROUNDED);
+    cfg.style_options_table_box = None;
+    cfg.style_commands_table_box = None;
+    cfg.style_options_table_expand = false;
+    cfg.style_commands_table_expand = true;
+    cfg.style_options_table_padding = PaddingDimensions::from((0, 2, 0, 1));
+    cfg.style_commands_table_padding = PaddingDimensions::from((0, 2, 0, 1));
+    cfg.style_options_table_collapse_padding = false;
+    cfg.style_commands_table_collapse_padding = false;
+    cfg.panel_title_string = "{}".to_string();
+    cfg.style_options_panel_padding = PaddingDimensions::from(0);
+    cfg.style_commands_panel_padding = PaddingDimensions::from(0);
+    cfg.padding_header_text = PaddingDimensions::from((1, 2, 0, 3));
+    cfg.padding_helptext = PaddingDimensions::from((0, 2, 1, 2));
+    cfg.padding_usage = PaddingDimensions::from((1, 2, 1, 2));
+    cfg.options_table_column_types = vec![
+        "opt_short".to_string(),
+        "opt_long".to_string(),
+        "metavar".to_string(),
+        "help".to_string(),
+    ];
+    cfg.commands_table_column_types = vec!["name".to_string(), "aliases".to_string(), "help".to_string()];
+    cfg.options_table_help_sections = vec![
+        "required".to_string(),
+        "help".to_string(),
+        "envvar".to_string(),
+        "default".to_string(),
+        "deprecated".to_string(),
+    ];
+    cfg.commands_table_help_sections = vec!["help".to_string(), "deprecated".to_string()];
+    cfg.deprecated_string = "[deprecated]".to_string();
+    cfg.deprecated_with_reason_string = "[deprecated: {}]".to_string();
+    cfg.envvar_string = "[env={}]".to_string();
+    cfg.default_string = "[default={}]".to_string();
+    cfg.append_metavars_help_string = "[{}]".to_string();
+    cfg.panel_inline_help_in_title = true;
+    cfg.delimiter_comma = ", ".to_string();
+    cfg.delimiter_slash = " / ".to_string();
+    cfg.panel_title_padding = 0;
+    cfg.required_short_string = "*".to_string();
+    cfg.panel_inline_help_delimiter = " - ".to_string();
+    cfg.required_long_string = "[required]".to_string();
+    cfg.range_string = "[{}]".to_string();
+    cfg.append_range_help_string = "[{}]".to_string();
+    cfg.padding_epilog = PaddingDimensions::from((0, 2, 1, 2));
+    cfg.padding_footer_text = PaddingDimensions::from((0, 2, 1, 2));
 }
 
 fn parse_style(input: &str) -> Style {

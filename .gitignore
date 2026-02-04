@@ -3,6 +3,8 @@
 .venv/
 tests/parity/**/output/
 tests/examples/**/output/
+tests/examples/compare_images/
+tests/examples/output_ansi/
 .DS_Store
 **/.DS_Store
 tests/parity/**/target-*/
