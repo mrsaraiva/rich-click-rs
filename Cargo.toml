@@ -6,8 +6,21 @@ rust-version = "1.70"
 description = "Rich help formatting for click-rs"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/msaraiva/rich-click-rs"
+documentation = "https://docs.rs/rich-click-rs"
+readme = "README.md"
 keywords = ["cli", "command-line", "terminal", "help", "rich"]
 categories = ["command-line-interface"]
+exclude = [
+    ".idea/",
+    "*.dat",
+    "docs/devel/",
+    "tests/parity/",
+    "tools/",
+]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 click = { path = "../click-rs" }
