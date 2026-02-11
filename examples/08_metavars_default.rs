@@ -1,21 +1,11 @@
 use click::command::Command;
-use click::context::Context;
+use click::context::ContextBuilder;
 use click::option::OptionBuilder;
 use click::types::Choice;
-use rich_click_rs::{main_rich_command, RichHelpConfig};
-
-fn get_bool_param(ctx: &Context, name: &str) -> bool {
-    if let Some(value) = ctx.get_param::<bool>(name) {
-        return *value;
-    }
-    if let Some(value) = ctx.get_param::<String>(name) {
-        return value == "true";
-    }
-    false
-}
+use rich_click_rs::{RichHelp, RichHelpConfig};
 
 fn main() {
-    let cli = Command::new("08_metavars_default.py")
+    let cli = Command::new("08_metavars_default")
         .help(
             "My amazing tool does all the things.\n\n\
 This is a minimal example based on documentation\n\
@@ -67,17 +57,10 @@ specific group subcommands.",
                 .help("This click choice has loads of options.")
                 .build(),
         )
-        .callback(|ctx| {
-            let debug = get_bool_param(ctx, "debug");
-            println!("Debug mode is {}", if debug { "on" } else { "off" });
-            Ok(())
-        })
+        .callback(|_ctx| Ok(()))
         .build();
 
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let ctx = ContextBuilder::new().info_name("08_metavars_default").build();
     let cfg = RichHelpConfig::default();
-    if let Err(err) = main_rich_command(&cli, args, &cfg) {
-        eprintln!("{}", err.format_full());
-        std::process::exit(err.exit_code());
-    }
+    println!("{}", cli.get_rich_help_with(&ctx, &cfg));
 }

@@ -1,19 +1,9 @@
 use click::command::Command;
-use click::context::Context;
+use click::context::ContextBuilder;
 use click::group::Group;
 use click::option::OptionBuilder;
 use click::types::PathType;
-use rich_click_rs::{main_rich_group, GroupConfig, RichHelpConfig};
-
-fn get_bool_param(ctx: &Context, name: &str) -> bool {
-    if let Some(value) = ctx.get_param::<bool>(name) {
-        return *value;
-    }
-    if let Some(value) = ctx.get_param::<String>(name) {
-        return value == "true";
-    }
-    false
-}
+use rich_click_rs::{RichHelp, GroupConfig, RichHelpConfig};
 
 fn main() {
     let sync = Command::new("sync")
@@ -82,7 +72,7 @@ fn main() {
         .help("Show this message and exit.")
         .build();
 
-    let cli = Group::new("03_groups_sorting.py")
+    let cli = Group::new("03_groups_sorting")
         .help(
             "My amazing tool does all the things.\n\n\
 This is a minimal example based on documentation\n\
@@ -108,11 +98,7 @@ specific subcommands.",
         )
         .option(version_opt)
         .help_option(help_opt)
-        .callback(|ctx| {
-            let debug = get_bool_param(ctx, "debug");
-            println!("Debug mode is {}", if debug { "on" } else { "off" });
-            Ok(())
-        })
+        .callback(|_ctx| Ok(()))
         .command(sync)
         .command(download)
         .command(auth)
@@ -159,9 +145,6 @@ specific subcommands.",
         },
     ];
 
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if let Err(err) = main_rich_group(&cli, args, &cfg) {
-        eprintln!("{}", err.format_full());
-        std::process::exit(err.exit_code());
-    }
+    let ctx = ContextBuilder::new().info_name("03_groups_sorting").build();
+    println!("{}", cli.get_rich_help_with(&ctx, &cfg));
 }

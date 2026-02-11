@@ -1,23 +1,13 @@
 use click::argument::Argument;
 use click::command::Command;
-use click::context::Context;
+use click::context::ContextBuilder;
 use click::option::OptionBuilder;
 use click::types::PathType;
-use rich_click_rs::{main_rich_command, RichHelpConfig};
+use rich_click_rs::{RichHelp, RichHelpConfig};
 use rich_rs::Style;
 
-fn get_bool_param(ctx: &Context, name: &str) -> bool {
-    if let Some(value) = ctx.get_param::<bool>(name) {
-        return *value;
-    }
-    if let Some(value) = ctx.get_param::<String>(name) {
-        return value == "true";
-    }
-    false
-}
-
 fn main() {
-    let cli = Command::new("07_custom_errors.py")
+    let cli = Command::new("07_custom_errors")
         .help(
             "My amazing tool does all the things.\n\n\
 This is a minimal example based on documentation\n\
@@ -41,22 +31,15 @@ specific group subcommands.",
                 .help("Enable debug mode")
                 .build(),
         )
-        .callback(|ctx| {
-            let debug = get_bool_param(ctx, "debug");
-            println!("Debug mode is {}", if debug { "on" } else { "off" });
-            Ok(())
-        })
+        .callback(|_ctx| Ok(()))
         .build();
 
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let ctx = ContextBuilder::new().info_name("07_custom_errors").build();
     let mut cfg = RichHelpConfig::default();
     cfg.style_errors_suggestion = Style::parse("magenta italic");
     cfg.errors_suggestion = Some("Try running the '--help' flag for more information.".to_string());
     cfg.errors_epilogue = Some(
         "To find out more, visit [link=https://mytool.com]https://mytool.com[/link]".to_string(),
     );
-    if let Err(err) = main_rich_command(&cli, args, &cfg) {
-        eprintln!("{}", err.format_full());
-        std::process::exit(err.exit_code());
-    }
+    println!("{}", cli.get_rich_help_with(&ctx, &cfg));
 }
