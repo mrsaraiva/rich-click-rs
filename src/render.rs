@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use click::argument::Argument;
 use click::command::Command;
-use click::context::{pop_context, push_context, Context, ContextBuilder};
+use click::context::{get_current_context, pop_context, push_context, Context, ContextBuilder};
 use click::error::ClickError;
 use click::group::{CommandLike, Group};
 use click::parameter::Parameter;
@@ -295,11 +295,19 @@ impl RichHelpRenderer {
         console: &mut Console<W>,
         error: &ClickError,
     ) -> io::Result<()> {
-        let message = if matches!(error, ClickError::Abort) {
+        let mut message = if matches!(error, ClickError::Abort) {
             self.config.aborted_text.clone()
         } else {
             error.format_full()
         };
+        if let Some(source) = self.param_source_for_error(error) {
+            let suffix = if self.config.errors_param_source_format.contains("{}") {
+                self.config.errors_param_source_format.replace("{}", &source)
+            } else {
+                format!("{} {}", self.config.errors_param_source_format, source)
+            };
+            message = append_suffix_to_first_line(&message, &suffix);
+        }
         let body = Text::styled(&message, self.config.style_padding_errors);
         let mut panel = Panel::new(Box::new(body))
             .with_border_style(self.config.style_errors_panel_border)
@@ -327,6 +335,49 @@ impl RichHelpRenderer {
             console.print(&text, None, None, None, false, "\n")?;
         }
         Ok(())
+    }
+
+    fn param_source_for_error(&self, error: &ClickError) -> Option<String> {
+        if !self.config.errors_show_param_source {
+            return None;
+        }
+        let ctx = get_current_context()?;
+        let mut candidates: Vec<String> = Vec::new();
+        match error {
+            ClickError::BadParameter { param_name, param_hint, .. } => {
+                if let Some(hints) = param_hint {
+                    for hint in hints {
+                        candidates.extend(collect_param_candidates(hint));
+                    }
+                }
+                if let Some(name) = param_name {
+                    candidates.extend(collect_param_candidates(name));
+                }
+            }
+            ClickError::MissingParameter { param_name, param_hint, .. } => {
+                if let Some(hints) = param_hint {
+                    for hint in hints {
+                        candidates.extend(collect_param_candidates(hint));
+                    }
+                }
+                if let Some(name) = param_name {
+                    candidates.extend(collect_param_candidates(name));
+                }
+            }
+            ClickError::BadOptionUsage { option_name, .. } => {
+                candidates.extend(collect_param_candidates(option_name));
+            }
+            _ => {}
+        }
+
+        for raw in candidates {
+            if let Some(name) = normalize_param_name(&raw) {
+                if let Some(source) = ctx.get_parameter_source(&name) {
+                    return Some(source.to_string());
+                }
+            }
+        }
+        None
     }
 
     fn print_section_spacing<W: io::Write>(
@@ -1226,6 +1277,30 @@ impl RichHelpRenderer {
         self.build_option_list(&opt.long, self.config.style_option)
     }
 
+    fn prompt_label_for_option(&self, opt: &click::option::ClickOption) -> Option<String> {
+        if !self.config.show_prompt || opt.prompt.is_none() {
+            return None;
+        }
+        let base = if opt.confirmation_prompt {
+            if opt.hide_input {
+                &self.config.prompt_confirm_hidden_string
+            } else {
+                &self.config.prompt_confirm_string
+            }
+        } else if opt.hide_input {
+            &self.config.prompt_hidden_string
+        } else {
+            &self.config.prompt_string
+        };
+        let mut label = base.clone();
+        if let Some(prompt) = opt.prompt.as_deref() {
+            if label.contains("{}") {
+                label = label.replace("{}", prompt);
+            }
+        }
+        Some(label)
+    }
+
     fn build_option_all_text(&self, opt: &click::option::ClickOption) -> Text {
         let mut text = Text::styled("", self.config.style_option);
         let mut first = true;
@@ -1330,6 +1405,7 @@ impl RichHelpRenderer {
                 "range" => self
                     .option_metavar(opt)
                     .map(|mv| self.config.append_range_help_string.replace("{}", &mv)),
+                "prompt" => self.prompt_label_for_option(opt),
                 "deprecated" => None,
                 _ => None,
             };
@@ -1367,6 +1443,20 @@ impl RichHelpRenderer {
                     text.append(value, Some(self.config.style_metavar_append));
                     first = false;
                 }
+            }
+        }
+        if self.config.show_prompt
+            && !self
+                .config
+                .options_table_help_sections
+                .iter()
+                .any(|s| s == "prompt")
+        {
+            if let Some(piece) = self.prompt_label_for_option(opt) {
+                if !first {
+                    text.append(separator, Some(self.config.style_option_help));
+                }
+                text.append(piece, Some(self.config.style_option_help));
             }
         }
         text
@@ -1428,6 +1518,7 @@ impl RichHelpRenderer {
                 "range" => self
                     .option_metavar(opt)
                     .map(|mv| self.config.append_range_help_string.replace("{}", &mv)),
+                "prompt" => self.prompt_label_for_option(opt),
                 "deprecated" => None,
                 _ => None,
             };
@@ -1439,6 +1530,17 @@ impl RichHelpRenderer {
                     let value = self.config.append_metavars_help_string.replace("{}", &mv);
                     parts.push(value);
                 }
+            }
+        }
+        if self.config.show_prompt
+            && !self
+                .config
+                .options_table_help_sections
+                .iter()
+                .any(|s| s == "prompt")
+        {
+            if let Some(piece) = self.prompt_label_for_option(opt) {
+                parts.push(piece);
             }
         }
         parts.join("  \n")
@@ -1709,8 +1811,40 @@ pub fn main_rich_command_with_errors(
     args: Vec<String>,
     config: &RichHelpConfig,
 ) -> Result<(), ClickError> {
-    match main_rich_command(command, args, config) {
-        Ok(()) => Ok(()),
+    let prog_name = CommandLike::name(command)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| {
+            std::env::args()
+                .next()
+                .unwrap_or_else(|| "program".to_string())
+        });
+
+    let args_for_eager = args.clone();
+    let ctx_result = command.make_context(&prog_name, args, None);
+
+    match ctx_result {
+        Ok(ctx) => {
+            let ctx = Arc::new(ctx);
+            push_context(Arc::clone(&ctx));
+            let result = command.invoke(&ctx);
+            if let Err(ref err) = result {
+                let renderer = RichHelpRenderer::new(config.clone());
+                eprint!("{}", renderer.render_error(err));
+            }
+            pop_context();
+            ctx.close();
+            result
+        }
+        Err(ClickError::Exit { code: 0 }) => {
+            if let Some(version_output) = get_version_output_from_args(command, &args_for_eager) {
+                println!("{}", version_output);
+                return Ok(());
+            }
+            let ctx = ContextBuilder::new().info_name(&prog_name).build();
+            let help = RichHelpRenderer::new(config.clone()).render_command_help(command, &ctx);
+            print!("{}", help);
+            Ok(())
+        }
         Err(err) => {
             let renderer = RichHelpRenderer::new(config.clone());
             eprint!("{}", renderer.render_error(&err));
@@ -1761,8 +1895,40 @@ pub fn main_rich_group_with_errors(
     args: Vec<String>,
     config: &RichHelpConfig,
 ) -> Result<(), ClickError> {
-    match main_rich_group(group, args, config) {
-        Ok(()) => Ok(()),
+    let prog_name = CommandLike::name(group)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| {
+            std::env::args()
+                .next()
+                .unwrap_or_else(|| "program".to_string())
+        });
+
+    let args_for_eager = args.clone();
+    let ctx_result = group.make_context(&prog_name, args, None);
+
+    match ctx_result {
+        Ok(ctx) => {
+            let ctx = Arc::new(ctx);
+            push_context(Arc::clone(&ctx));
+            let result = group.invoke(&ctx);
+            if let Err(ref err) = result {
+                let renderer = RichHelpRenderer::new(config.clone());
+                eprint!("{}", renderer.render_error(err));
+            }
+            pop_context();
+            ctx.close();
+            result
+        }
+        Err(ClickError::Exit { code: 0 }) => {
+            if let Some(version_output) = get_version_output_from_args(&group.command, &args_for_eager) {
+                println!("{}", version_output);
+                return Ok(());
+            }
+            let ctx = ContextBuilder::new().info_name(&prog_name).build();
+            let help = RichHelpRenderer::new(config.clone()).render_group_help(group, &ctx);
+            print!("{}", help);
+            Ok(())
+        }
         Err(err) => {
             let renderer = RichHelpRenderer::new(config.clone());
             eprint!("{}", renderer.render_error(&err));
@@ -1798,4 +1964,52 @@ fn arg_matches_opt(arg: &str, opt: &str) -> bool {
         }
     }
     false
+}
+
+fn append_suffix_to_first_line(message: &str, suffix: &str) -> String {
+    if let Some(idx) = message.find('\n') {
+        let (first, rest) = message.split_at(idx);
+        format!("{}{}{}", first, suffix, rest)
+    } else {
+        format!("{}{}", message, suffix)
+    }
+}
+
+fn collect_param_candidates(value: &str) -> Vec<String> {
+    let mut long = Vec::new();
+    let mut short = Vec::new();
+    for raw in value.split(|c| c == ',' || c == '/') {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with("--") {
+            long.push(trimmed.to_string());
+        } else {
+            short.push(trimmed.to_string());
+        }
+    }
+    long.extend(short);
+    long
+}
+
+fn normalize_param_name(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.starts_with("--no-") {
+        return Some(trimmed.trim_start_matches("--no-").replace('-', "_"));
+    }
+    if trimmed.starts_with("--") {
+        return Some(trimmed.trim_start_matches("--").replace('-', "_"));
+    }
+    if trimmed.starts_with('-') {
+        let name = trimmed.trim_start_matches('-');
+        if name.is_empty() {
+            return None;
+        }
+        return Some(name.to_string());
+    }
+    Some(trimmed.replace('-', "_").to_ascii_lowercase())
 }

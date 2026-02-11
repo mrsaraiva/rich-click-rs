@@ -6,6 +6,7 @@ mod config;
 mod render;
 mod theme;
 mod rich_main;
+mod testing;
 
 pub use config::{
     ColorSystemMode, GroupConfig, PanelConfig, RichHelpConfig, RichHelpConfigBuilder, TableConfig,
@@ -17,6 +18,7 @@ pub use render::{
 };
 pub use theme::{list_themes, ThemeError};
 pub use rich_main::RichMainExt;
+pub use testing::RichCliRunner;
 
 #[macro_export]
 macro_rules! rich_main {

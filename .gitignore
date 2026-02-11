@@ -1,11 +1,28 @@
-/target
+/target/
 **/target/
+
+# macOS
+.DS_Store
+**/.DS_Store
+._*
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+
+# Python venvs
 .venv/
+tests/examples/**/.venv/
+
+# Test outputs (generated)
 tests/parity/**/output/
+tests/parity/**/target-*/
 tests/examples/**/output/
 tests/examples/compare_images/
 tests/examples/output_ansi/
-.DS_Store
-**/.DS_Store
-tests/parity/**/target-*/
-tests/examples/**/.venv/
+
+# Dev docs
+docs/devel/

@@ -64,7 +64,43 @@ Set a theme via env var (matches Python rich-click):
 RICH_CLICK_THEME=solarized cargo run --example basic
 ```
 
+## Optional Enhancements (Off by Default)
+
+These are optional helpers that go beyond Python rich-click parity. All are disabled by default.
+
+- Prompt metadata in help output:
+  - Enable `show_prompt = true`.
+  - Customize `prompt_string`, `prompt_confirm_string`, `prompt_hidden_string`, `prompt_confirm_hidden_string`.
+  - If you want full ordering control, add `"prompt"` to `options_table_help_sections`.
+- Parameter source in errors:
+  - Enable `errors_show_param_source = true`.
+  - Customize `errors_param_source_format` (use `{}` for the source label).
+- Rich test runner:
+  - Use `RichCliRunner` to capture rich help and rich errors when testing.
+
+```rust
+use click::Command;
+use rich_click_rs::{RichCliRunner, RichHelpConfig};
+
+let cmd = Command::new("demo")
+    .option(
+        click::OptionBuilder::new(&["--token"])
+            .prompt("Token")
+            .hide_input(true)
+            .build(),
+    )
+    .build();
+
+let config = RichHelpConfig::builder()
+    .build();
+
+let result = RichCliRunner::new()
+    .config(RichHelpConfig { show_prompt: true, ..config })
+    .invoke(&cmd, &["--help"]);
+```
+
 ## Status
 
-This is an early scaffold focused on help rendering (usage, panels, option/command tables).
-More parity features will be added as we iterate.
+Feature-parity with Python rich-click for core help rendering, with parity tests and example suite
+comparisons in place. Optional enhancements (off by default) are available for prompt metadata in
+help output, error parameter-source hints, and a rich-aware test runner.

@@ -92,6 +92,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "click-derive",
+ "encoding_rs",
  "libc",
  "thiserror",
  "uuid",
@@ -148,6 +149,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ececcb659e7ba858fb4f10388c250a7252eb0a27373f1a72b8748afdd248e587"
 dependencies = [
  "powerfmt",
+]
+
+[[package]]
+name = "encoding_rs"
+version = "0.8.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
@@ -554,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "rich-rs"
-version = "1.0.0"
+version = "1.0.2"
 dependencies = [
  "atty",
  "crossterm",

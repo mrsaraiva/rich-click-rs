@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional prompt metadata in option help output (`show_prompt`, prompt label strings).
+- Optional parameter source suffix for error output (`errors_show_param_source`, format string).
+- `RichCliRunner` wrapper for rich help/error output in tests.
+
 ## [0.1.0] - 2026-02-04
 
 ### Added
