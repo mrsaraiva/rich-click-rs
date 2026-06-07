@@ -23,8 +23,8 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-click = { package = "click-rs", version = "1.0.0", path = "../click-rs" }
-rich-rs = { version = "1.1.0", path = "../rich-rs" }
+click = { package = "click-rs", version = "1.0.0" }
+rich-rs = "1.1.0"
 serde_json = "1.0"
 
 [dev-dependencies]
