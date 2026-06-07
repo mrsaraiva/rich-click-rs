@@ -93,8 +93,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "click"
-version = "0.1.0"
+name = "click-derive"
+version = "1.0.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "click-rs"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "click-derive",
@@ -105,15 +114,6 @@ dependencies = [
  "thiserror",
  "uuid",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "click-derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -585,16 +585,16 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "rich-click-rs"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
- "click",
+ "click-rs",
  "rich-rs",
  "serde_json",
 ]
 
 [[package]]
 name = "rich-rs"
-version = "1.0.5"
+version = "1.1.0"
 dependencies = [
  "atty",
  "crossterm",

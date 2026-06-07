@@ -1,11 +1,11 @@
 [package]
 name = "rich-click-rs"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.70"
 description = "Rich help formatting for click-rs"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/msaraiva/rich-click-rs"
+license = "MIT"
+repository = "https://github.com/mrsaraiva/rich-click-rs"
 documentation = "https://docs.rs/rich-click-rs"
 readme = "README.md"
 keywords = ["cli", "command-line", "terminal", "help", "rich"]
@@ -23,8 +23,8 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-click = { path = "../click-rs" }
-rich-rs = { path = "../rich-rs" }
+click = { package = "click-rs", version = "1.0.0", path = "../click-rs" }
+rich-rs = { version = "1.1.0", path = "../rich-rs" }
 serde_json = "1.0"
 
 [dev-dependencies]

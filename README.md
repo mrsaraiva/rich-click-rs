@@ -1,18 +1,33 @@
 # rich-click-rs
 
-Rich help formatting for [`click-rs`](../click-rs), powered by [`rich-rs`](../rich-rs).
+[![Crates.io](https://img.shields.io/crates/v/rich-click-rs.svg)](https://crates.io/crates/rich-click-rs)
+[![Documentation](https://docs.rs/rich-click-rs/badge.svg)](https://docs.rs/rich-click-rs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Rich help formatting for [`click-rs`](https://crates.io/crates/click-rs), powered by
+[`rich-rs`](https://crates.io/crates/rich-rs) — a Rust port of Python's
+[rich-click](https://github.com/ewels/rich-click).
 
 This crate provides rich-styled help output (usage, panels, option tables, and command tables)
 that mirrors the Python rich-click experience, but for Rust.
 
-## Quick Start
+> **Attribution.** rich-click-rs is a derivative work: a Rust port of
+> [rich-click](https://github.com/ewels/rich-click) by Phil Ewels and contributors, which
+> itself builds on [Click](https://github.com/pallets/click) and
+> [Rich](https://github.com/Textualize/rich). All credit for the original design goes to
+> their authors.
+
+## Installing
 
 ```toml
 [dependencies]
-click = { path = "../click-rs" }
-rich-rs = { path = "../rich-rs" }
-rich-click-rs = { path = "../rich-click-rs" }
+rich-click-rs = "1.0"
 ```
+
+This pulls in `click-rs` and `rich-rs` transitively. Note the click library is imported as
+`click` even though its crate is named `click-rs`.
+
+## Quick Start
 
 ```rust
 use click::Command;
