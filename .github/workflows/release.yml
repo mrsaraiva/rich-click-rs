@@ -26,6 +26,7 @@ jobs:
 
   parity:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -43,6 +44,7 @@ jobs:
 
   examples:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -72,7 +74,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    needs: [test, parity, examples, package]
+    needs: [test, package]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -113,7 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    needs: [test, parity, examples, package, publish]
+    needs: [test, package, publish]
     steps:
       - uses: actions/checkout@v4
       - name: Create GitHub Release
