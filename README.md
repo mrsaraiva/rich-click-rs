@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Rich help formatting for [`click-rs`](https://crates.io/crates/click-rs), powered by
-[`rich-rs`](https://crates.io/crates/rich-rs) — a Rust port of Python's
+[`rich-rs`](https://crates.io/crates/rich-rs), a Rust port of Python's
 [rich-click](https://github.com/ewels/rich-click).
 
 This crate provides rich-styled help output (usage, panels, option tables, and command tables)
