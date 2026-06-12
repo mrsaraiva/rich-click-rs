@@ -15,7 +15,12 @@ from the 'click' package.\n\n\
 You can try using --help at the top level and also for\n\
 specific group subcommands.",
         )
-        .argument(Argument::new("input").type_(PathType::new()).required(true).build())
+        .argument(
+            Argument::new("input")
+                .type_(PathType::new())
+                .required(true)
+                .build(),
+        )
         .option(
             OptionBuilder::new(&["--type"])
                 .default("files")
@@ -23,7 +28,12 @@ specific group subcommands.",
                 .help("Type of file to sync")
                 .build(),
         )
-        .option(OptionBuilder::new(&["--all"]).flag("true").help("Sync all the things?").build())
+        .option(
+            OptionBuilder::new(&["--all"])
+                .flag("true")
+                .help("Sync all the things?")
+                .build(),
+        )
         .option(
             OptionBuilder::new(&["--debug"])
                 .flag("true")

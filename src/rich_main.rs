@@ -2,7 +2,10 @@ use click::command::Command;
 use click::error::ClickError;
 use click::group::Group;
 
-use crate::{main_rich_command, main_rich_command_with_errors, main_rich_group, main_rich_group_with_errors, RichHelpConfig};
+use crate::{
+    main_rich_command, main_rich_command_with_errors, main_rich_group, main_rich_group_with_errors,
+    RichHelpConfig,
+};
 
 pub trait RichMainExt {
     fn main_rich(&self) -> Result<(), ClickError>;

@@ -26,7 +26,12 @@ specific group subcommands.[/]",
                 .help("Type of file to sync")
                 .build(),
         )
-        .option(OptionBuilder::new(&["--all"]).flag("true").help("Sync all the things?").build())
+        .option(
+            OptionBuilder::new(&["--all"])
+                .flag("true")
+                .help("Sync all the things?")
+                .build(),
+        )
         .option(
             OptionBuilder::new(&["--debug"])
                 .flag("true")

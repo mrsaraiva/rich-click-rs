@@ -1,5 +1,5 @@
-use std::sync::OnceLock;
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use rich_rs::r#box::{
     ASCII, ASCII2, ASCII_DOUBLE_HEAD, DOUBLE, DOUBLE_EDGE, HEAVY, HEAVY_EDGE, HEAVY_HEAD,
@@ -365,7 +365,11 @@ impl Default for RichHelpConfig {
                 "metavar".to_string(),
                 "help".to_string(),
             ],
-            commands_table_column_types: vec!["name".to_string(), "aliases".to_string(), "help".to_string()],
+            commands_table_column_types: vec![
+                "name".to_string(),
+                "aliases".to_string(),
+                "help".to_string(),
+            ],
             options_table_help_sections: vec![
                 "help".to_string(),
                 "deprecated".to_string(),
@@ -503,133 +507,577 @@ impl RichHelpConfig {
         match key {
             "width" => self.width = value.as_u64().map(|v| v as usize),
             "max_width" => self.max_width = value.as_u64().map(|v| v as usize),
-            "color_system" => if let Some(mode) = parse_color_system_mode(value) { self.color_system = mode; },
+            "color_system" => {
+                if let Some(mode) = parse_color_system_mode(value) {
+                    self.color_system = mode;
+                }
+            }
             "force_terminal" => self.force_terminal = value.as_bool(),
-            "panel_title_string" => if let Some(v) = value.as_str() { self.panel_title_string = v.to_string(); },
-            "deprecated_string" => if let Some(v) = value.as_str() { self.deprecated_string = v.to_string(); },
-            "deprecated_with_reason_string" => if let Some(v) = value.as_str() { self.deprecated_with_reason_string = v.to_string(); },
-            "default_string" => if let Some(v) = value.as_str() { self.default_string = v.to_string(); },
-            "envvar_string" => if let Some(v) = value.as_str() { self.envvar_string = v.to_string(); },
-            "required_short_string" => if let Some(v) = value.as_str() { self.required_short_string = v.to_string(); },
-            "required_long_string" => if let Some(v) = value.as_str() { self.required_long_string = v.to_string(); },
-            "range_string" => if let Some(v) = value.as_str() { self.range_string = v.to_string(); },
-            "append_metavars_help_string" => if let Some(v) = value.as_str() { self.append_metavars_help_string = v.to_string(); },
-            "append_range_help_string" => if let Some(v) = value.as_str() { self.append_range_help_string = v.to_string(); },
-            "delimiter_comma" => if let Some(v) = value.as_str() { self.delimiter_comma = v.to_string(); },
-            "delimiter_slash" => if let Some(v) = value.as_str() { self.delimiter_slash = v.to_string(); },
-            "options_panel_title" => if let Some(v) = value.as_str() { self.options_panel_title = v.to_string(); },
-            "commands_panel_title" => if let Some(v) = value.as_str() { self.commands_panel_title = v.to_string(); },
-            "arguments_panel_title" => if let Some(v) = value.as_str() { self.arguments_panel_title = v.to_string(); },
-            "errors_panel_title" => if let Some(v) = value.as_str() { self.errors_panel_title = v.to_string(); },
-            "aborted_text" => if let Some(v) = value.as_str() { self.aborted_text = v.to_string(); },
-            "errors_show_param_source" => if let Some(v) = value.as_bool() { self.errors_show_param_source = v; },
-            "errors_param_source_format" => if let Some(v) = value.as_str() { self.errors_param_source_format = v.to_string(); },
-            "show_prompt" => if let Some(v) = value.as_bool() { self.show_prompt = v; },
-            "prompt_string" => if let Some(v) = value.as_str() { self.prompt_string = v.to_string(); },
-            "prompt_confirm_string" => if let Some(v) = value.as_str() { self.prompt_confirm_string = v.to_string(); },
-            "prompt_hidden_string" => if let Some(v) = value.as_str() { self.prompt_hidden_string = v.to_string(); },
-            "prompt_confirm_hidden_string" => if let Some(v) = value.as_str() { self.prompt_confirm_hidden_string = v.to_string(); },
-            "style_option" => if let Some(v) = value.as_str() { self.style_option = parse_style(v); },
+            "panel_title_string" => {
+                if let Some(v) = value.as_str() {
+                    self.panel_title_string = v.to_string();
+                }
+            }
+            "deprecated_string" => {
+                if let Some(v) = value.as_str() {
+                    self.deprecated_string = v.to_string();
+                }
+            }
+            "deprecated_with_reason_string" => {
+                if let Some(v) = value.as_str() {
+                    self.deprecated_with_reason_string = v.to_string();
+                }
+            }
+            "default_string" => {
+                if let Some(v) = value.as_str() {
+                    self.default_string = v.to_string();
+                }
+            }
+            "envvar_string" => {
+                if let Some(v) = value.as_str() {
+                    self.envvar_string = v.to_string();
+                }
+            }
+            "required_short_string" => {
+                if let Some(v) = value.as_str() {
+                    self.required_short_string = v.to_string();
+                }
+            }
+            "required_long_string" => {
+                if let Some(v) = value.as_str() {
+                    self.required_long_string = v.to_string();
+                }
+            }
+            "range_string" => {
+                if let Some(v) = value.as_str() {
+                    self.range_string = v.to_string();
+                }
+            }
+            "append_metavars_help_string" => {
+                if let Some(v) = value.as_str() {
+                    self.append_metavars_help_string = v.to_string();
+                }
+            }
+            "append_range_help_string" => {
+                if let Some(v) = value.as_str() {
+                    self.append_range_help_string = v.to_string();
+                }
+            }
+            "delimiter_comma" => {
+                if let Some(v) = value.as_str() {
+                    self.delimiter_comma = v.to_string();
+                }
+            }
+            "delimiter_slash" => {
+                if let Some(v) = value.as_str() {
+                    self.delimiter_slash = v.to_string();
+                }
+            }
+            "options_panel_title" => {
+                if let Some(v) = value.as_str() {
+                    self.options_panel_title = v.to_string();
+                }
+            }
+            "commands_panel_title" => {
+                if let Some(v) = value.as_str() {
+                    self.commands_panel_title = v.to_string();
+                }
+            }
+            "arguments_panel_title" => {
+                if let Some(v) = value.as_str() {
+                    self.arguments_panel_title = v.to_string();
+                }
+            }
+            "errors_panel_title" => {
+                if let Some(v) = value.as_str() {
+                    self.errors_panel_title = v.to_string();
+                }
+            }
+            "aborted_text" => {
+                if let Some(v) = value.as_str() {
+                    self.aborted_text = v.to_string();
+                }
+            }
+            "errors_show_param_source" => {
+                if let Some(v) = value.as_bool() {
+                    self.errors_show_param_source = v;
+                }
+            }
+            "errors_param_source_format" => {
+                if let Some(v) = value.as_str() {
+                    self.errors_param_source_format = v.to_string();
+                }
+            }
+            "show_prompt" => {
+                if let Some(v) = value.as_bool() {
+                    self.show_prompt = v;
+                }
+            }
+            "prompt_string" => {
+                if let Some(v) = value.as_str() {
+                    self.prompt_string = v.to_string();
+                }
+            }
+            "prompt_confirm_string" => {
+                if let Some(v) = value.as_str() {
+                    self.prompt_confirm_string = v.to_string();
+                }
+            }
+            "prompt_hidden_string" => {
+                if let Some(v) = value.as_str() {
+                    self.prompt_hidden_string = v.to_string();
+                }
+            }
+            "prompt_confirm_hidden_string" => {
+                if let Some(v) = value.as_str() {
+                    self.prompt_confirm_hidden_string = v.to_string();
+                }
+            }
+            "style_option" => {
+                if let Some(v) = value.as_str() {
+                    self.style_option = parse_style(v);
+                }
+            }
             "style_option_negative" => self.style_option_negative = parse_optional_style(value),
-            "style_argument" => if let Some(v) = value.as_str() { self.style_argument = parse_style(v); },
-            "style_command" => if let Some(v) = value.as_str() { self.style_command = parse_style(v); },
-            "style_command_aliases" => if let Some(v) = value.as_str() { self.style_command_aliases = parse_style(v); },
-            "style_switch" => if let Some(v) = value.as_str() { self.style_switch = parse_style(v); },
+            "style_argument" => {
+                if let Some(v) = value.as_str() {
+                    self.style_argument = parse_style(v);
+                }
+            }
+            "style_command" => {
+                if let Some(v) = value.as_str() {
+                    self.style_command = parse_style(v);
+                }
+            }
+            "style_command_aliases" => {
+                if let Some(v) = value.as_str() {
+                    self.style_command_aliases = parse_style(v);
+                }
+            }
+            "style_switch" => {
+                if let Some(v) = value.as_str() {
+                    self.style_switch = parse_style(v);
+                }
+            }
             "style_switch_negative" => self.style_switch_negative = parse_optional_style(value),
-            "style_metavar" => if let Some(v) = value.as_str() { self.style_metavar = parse_style(v); },
-            "style_metavar_append" => if let Some(v) = value.as_str() { self.style_metavar_append = parse_style(v); },
-            "style_metavar_separator" => if let Some(v) = value.as_str() { self.style_metavar_separator = parse_style(v); },
+            "style_metavar" => {
+                if let Some(v) = value.as_str() {
+                    self.style_metavar = parse_style(v);
+                }
+            }
+            "style_metavar_append" => {
+                if let Some(v) = value.as_str() {
+                    self.style_metavar_append = parse_style(v);
+                }
+            }
+            "style_metavar_separator" => {
+                if let Some(v) = value.as_str() {
+                    self.style_metavar_separator = parse_style(v);
+                }
+            }
             "style_range_append" => self.style_range_append = parse_optional_style(value),
-            "style_header_text" => if let Some(v) = value.as_str() { self.style_header_text = parse_style(v); },
-            "style_epilog_text" => if let Some(v) = value.as_str() { self.style_epilog_text = parse_style(v); },
-            "style_footer_text" => if let Some(v) = value.as_str() { self.style_footer_text = parse_style(v); },
-            "style_usage" => if let Some(v) = value.as_str() { self.style_usage = parse_style(v); },
-            "style_usage_command" => if let Some(v) = value.as_str() { self.style_usage_command = parse_style(v); },
-            "style_usage_separator" => if let Some(v) = value.as_str() { self.style_usage_separator = parse_style(v); },
-            "style_deprecated" => if let Some(v) = value.as_str() { self.style_deprecated = parse_style(v); },
-            "style_helptext_first_line" => if let Some(v) = value.as_str() { self.style_helptext_first_line = parse_style(v); },
-            "style_helptext" => if let Some(v) = value.as_str() { self.style_helptext = parse_style(v); },
+            "style_header_text" => {
+                if let Some(v) = value.as_str() {
+                    self.style_header_text = parse_style(v);
+                }
+            }
+            "style_epilog_text" => {
+                if let Some(v) = value.as_str() {
+                    self.style_epilog_text = parse_style(v);
+                }
+            }
+            "style_footer_text" => {
+                if let Some(v) = value.as_str() {
+                    self.style_footer_text = parse_style(v);
+                }
+            }
+            "style_usage" => {
+                if let Some(v) = value.as_str() {
+                    self.style_usage = parse_style(v);
+                }
+            }
+            "style_usage_command" => {
+                if let Some(v) = value.as_str() {
+                    self.style_usage_command = parse_style(v);
+                }
+            }
+            "style_usage_separator" => {
+                if let Some(v) = value.as_str() {
+                    self.style_usage_separator = parse_style(v);
+                }
+            }
+            "style_deprecated" => {
+                if let Some(v) = value.as_str() {
+                    self.style_deprecated = parse_style(v);
+                }
+            }
+            "style_helptext_first_line" => {
+                if let Some(v) = value.as_str() {
+                    self.style_helptext_first_line = parse_style(v);
+                }
+            }
+            "style_helptext" => {
+                if let Some(v) = value.as_str() {
+                    self.style_helptext = parse_style(v);
+                }
+            }
             "style_helptext_aliases" => self.style_helptext_aliases = parse_optional_style(value),
-            "style_option_help" => if let Some(v) = value.as_str() { self.style_option_help = parse_style(v); },
-            "style_command_help" => if let Some(v) = value.as_str() { self.style_command_help = parse_style(v); },
-            "style_option_default" => if let Some(v) = value.as_str() { self.style_option_default = parse_style(v); },
-            "style_option_envvar" => if let Some(v) = value.as_str() { self.style_option_envvar = parse_style(v); },
-            "style_required_short" => if let Some(v) = value.as_str() { self.style_required_short = parse_style(v); },
-            "style_required_long" => if let Some(v) = value.as_str() { self.style_required_long = parse_style(v); },
-            "style_options_panel_border" => if let Some(v) = value.as_str() { self.style_options_panel_border = parse_style(v); },
-            "style_commands_panel_border" => if let Some(v) = value.as_str() { self.style_commands_panel_border = parse_style(v); },
-            "style_errors_panel_border" => if let Some(v) = value.as_str() { self.style_errors_panel_border = parse_style(v); },
+            "style_option_help" => {
+                if let Some(v) = value.as_str() {
+                    self.style_option_help = parse_style(v);
+                }
+            }
+            "style_command_help" => {
+                if let Some(v) = value.as_str() {
+                    self.style_command_help = parse_style(v);
+                }
+            }
+            "style_option_default" => {
+                if let Some(v) = value.as_str() {
+                    self.style_option_default = parse_style(v);
+                }
+            }
+            "style_option_envvar" => {
+                if let Some(v) = value.as_str() {
+                    self.style_option_envvar = parse_style(v);
+                }
+            }
+            "style_required_short" => {
+                if let Some(v) = value.as_str() {
+                    self.style_required_short = parse_style(v);
+                }
+            }
+            "style_required_long" => {
+                if let Some(v) = value.as_str() {
+                    self.style_required_long = parse_style(v);
+                }
+            }
+            "style_options_panel_border" => {
+                if let Some(v) = value.as_str() {
+                    self.style_options_panel_border = parse_style(v);
+                }
+            }
+            "style_commands_panel_border" => {
+                if let Some(v) = value.as_str() {
+                    self.style_commands_panel_border = parse_style(v);
+                }
+            }
+            "style_errors_panel_border" => {
+                if let Some(v) = value.as_str() {
+                    self.style_errors_panel_border = parse_style(v);
+                }
+            }
             "style_options_panel_box" => self.style_options_panel_box = parse_box_value(value),
             "style_commands_panel_box" => self.style_commands_panel_box = parse_box_value(value),
             "style_errors_panel_box" => self.style_errors_panel_box = parse_box_value(value),
-            "style_options_panel_help_style" => if let Some(v) = value.as_str() { self.style_options_panel_help_style = parse_style(v); },
-            "style_commands_panel_help_style" => if let Some(v) = value.as_str() { self.style_commands_panel_help_style = parse_style(v); },
-            "style_options_panel_title_style" => if let Some(v) = value.as_str() { self.style_options_panel_title_style = parse_style(v); },
-            "style_commands_panel_title_style" => if let Some(v) = value.as_str() { self.style_commands_panel_title_style = parse_style(v); },
-            "style_options_panel_style" => if let Some(v) = value.as_str() { self.style_options_panel_style = parse_style(v); },
-            "style_commands_panel_style" => if let Some(v) = value.as_str() { self.style_commands_panel_style = parse_style(v); },
-            "style_padding_usage" => if let Some(v) = value.as_str() { self.style_padding_usage = parse_style(v); },
-            "style_padding_helptext" => if let Some(v) = value.as_str() { self.style_padding_helptext = parse_style(v); },
-            "style_padding_epilog" => if let Some(v) = value.as_str() { self.style_padding_epilog = parse_style(v); },
-            "style_padding_errors" => if let Some(v) = value.as_str() { self.style_padding_errors = parse_style(v); },
-            "style_aborted" => if let Some(v) = value.as_str() { self.style_aborted = parse_style(v); },
-            "style_options_table_border_style" => if let Some(v) = value.as_str() { self.style_options_table_border_style = parse_style(v); },
-            "style_commands_table_border_style" => if let Some(v) = value.as_str() { self.style_commands_table_border_style = parse_style(v); },
-            "style_commands_table_column_width_ratio" => if let Some(v) = parse_ratio_pair(value) { self.style_commands_table_column_width_ratio = Some(v); },
-            "style_options_table_show_lines" => if let Some(v) = value.as_bool() { self.style_options_table_show_lines = v; },
-            "style_commands_table_show_lines" => if let Some(v) = value.as_bool() { self.style_commands_table_show_lines = v; },
-            "style_options_table_leading" => if let Some(v) = value.as_u64() { self.style_options_table_leading = v as usize; },
-            "style_commands_table_leading" => if let Some(v) = value.as_u64() { self.style_commands_table_leading = v as usize; },
-            "style_options_table_pad_edge" => if let Some(v) = value.as_bool() { self.style_options_table_pad_edge = v; },
-            "style_commands_table_pad_edge" => if let Some(v) = value.as_bool() { self.style_commands_table_pad_edge = v; },
-            "style_options_table_collapse_padding" => if let Some(v) = value.as_bool() { self.style_options_table_collapse_padding = v; },
-            "style_commands_table_collapse_padding" => if let Some(v) = value.as_bool() { self.style_commands_table_collapse_padding = v; },
-            "style_options_table_expand" => if let Some(v) = value.as_bool() { self.style_options_table_expand = v; },
-            "style_commands_table_expand" => if let Some(v) = value.as_bool() { self.style_commands_table_expand = v; },
+            "style_options_panel_help_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_options_panel_help_style = parse_style(v);
+                }
+            }
+            "style_commands_panel_help_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_commands_panel_help_style = parse_style(v);
+                }
+            }
+            "style_options_panel_title_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_options_panel_title_style = parse_style(v);
+                }
+            }
+            "style_commands_panel_title_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_commands_panel_title_style = parse_style(v);
+                }
+            }
+            "style_options_panel_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_options_panel_style = parse_style(v);
+                }
+            }
+            "style_commands_panel_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_commands_panel_style = parse_style(v);
+                }
+            }
+            "style_padding_usage" => {
+                if let Some(v) = value.as_str() {
+                    self.style_padding_usage = parse_style(v);
+                }
+            }
+            "style_padding_helptext" => {
+                if let Some(v) = value.as_str() {
+                    self.style_padding_helptext = parse_style(v);
+                }
+            }
+            "style_padding_epilog" => {
+                if let Some(v) = value.as_str() {
+                    self.style_padding_epilog = parse_style(v);
+                }
+            }
+            "style_padding_errors" => {
+                if let Some(v) = value.as_str() {
+                    self.style_padding_errors = parse_style(v);
+                }
+            }
+            "style_aborted" => {
+                if let Some(v) = value.as_str() {
+                    self.style_aborted = parse_style(v);
+                }
+            }
+            "style_options_table_border_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_options_table_border_style = parse_style(v);
+                }
+            }
+            "style_commands_table_border_style" => {
+                if let Some(v) = value.as_str() {
+                    self.style_commands_table_border_style = parse_style(v);
+                }
+            }
+            "style_commands_table_column_width_ratio" => {
+                if let Some(v) = parse_ratio_pair(value) {
+                    self.style_commands_table_column_width_ratio = Some(v);
+                }
+            }
+            "style_options_table_show_lines" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_options_table_show_lines = v;
+                }
+            }
+            "style_commands_table_show_lines" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_commands_table_show_lines = v;
+                }
+            }
+            "style_options_table_leading" => {
+                if let Some(v) = value.as_u64() {
+                    self.style_options_table_leading = v as usize;
+                }
+            }
+            "style_commands_table_leading" => {
+                if let Some(v) = value.as_u64() {
+                    self.style_commands_table_leading = v as usize;
+                }
+            }
+            "style_options_table_pad_edge" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_options_table_pad_edge = v;
+                }
+            }
+            "style_commands_table_pad_edge" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_commands_table_pad_edge = v;
+                }
+            }
+            "style_options_table_collapse_padding" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_options_table_collapse_padding = v;
+                }
+            }
+            "style_commands_table_collapse_padding" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_commands_table_collapse_padding = v;
+                }
+            }
+            "style_options_table_expand" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_options_table_expand = v;
+                }
+            }
+            "style_commands_table_expand" => {
+                if let Some(v) = value.as_bool() {
+                    self.style_commands_table_expand = v;
+                }
+            }
             "style_options_table_box" => self.style_options_table_box = parse_box_value(value),
             "style_commands_table_box" => self.style_commands_table_box = parse_box_value(value),
-            "style_options_table_row_styles" => if let Some(v) = parse_style_list(value) { self.style_options_table_row_styles = v; },
-            "style_commands_table_row_styles" => if let Some(v) = parse_style_list(value) { self.style_commands_table_row_styles = v; },
-            "style_options_panel_padding" => if let Some(v) = parse_padding_value(value) { self.style_options_panel_padding = v; },
-            "style_commands_panel_padding" => if let Some(v) = parse_padding_value(value) { self.style_commands_panel_padding = v; },
-            "style_options_table_padding" => if let Some(v) = parse_padding_value(value) { self.style_options_table_padding = v; },
-            "style_commands_table_padding" => if let Some(v) = parse_padding_value(value) { self.style_commands_table_padding = v; },
-            "panel_title_padding" => if let Some(v) = value.as_u64() { self.panel_title_padding = v as usize; },
-            "align_options_panel" => if let Some(v) = parse_align(value) { self.align_options_panel = v; },
-            "align_commands_panel" => if let Some(v) = parse_align(value) { self.align_commands_panel = v; },
-            "align_errors_panel" => if let Some(v) = parse_align(value) { self.align_errors_panel = v; },
-            "panel_inline_help_in_title" => if let Some(v) = value.as_bool() { self.panel_inline_help_in_title = v; },
-            "panel_inline_help_delimiter" => if let Some(v) = value.as_str() { self.panel_inline_help_delimiter = v.to_string(); },
-            "options_table_column_types" => if let Some(v) = parse_string_list(value) { self.options_table_column_types = v; },
-            "commands_table_column_types" => if let Some(v) = parse_string_list(value) { self.commands_table_column_types = v; },
-            "options_table_help_sections" => if let Some(v) = parse_string_list(value) { self.options_table_help_sections = v; },
-            "commands_table_help_sections" => if let Some(v) = parse_string_list(value) { self.commands_table_help_sections = v; },
+            "style_options_table_row_styles" => {
+                if let Some(v) = parse_style_list(value) {
+                    self.style_options_table_row_styles = v;
+                }
+            }
+            "style_commands_table_row_styles" => {
+                if let Some(v) = parse_style_list(value) {
+                    self.style_commands_table_row_styles = v;
+                }
+            }
+            "style_options_panel_padding" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.style_options_panel_padding = v;
+                }
+            }
+            "style_commands_panel_padding" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.style_commands_panel_padding = v;
+                }
+            }
+            "style_options_table_padding" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.style_options_table_padding = v;
+                }
+            }
+            "style_commands_table_padding" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.style_commands_table_padding = v;
+                }
+            }
+            "panel_title_padding" => {
+                if let Some(v) = value.as_u64() {
+                    self.panel_title_padding = v as usize;
+                }
+            }
+            "align_options_panel" => {
+                if let Some(v) = parse_align(value) {
+                    self.align_options_panel = v;
+                }
+            }
+            "align_commands_panel" => {
+                if let Some(v) = parse_align(value) {
+                    self.align_commands_panel = v;
+                }
+            }
+            "align_errors_panel" => {
+                if let Some(v) = parse_align(value) {
+                    self.align_errors_panel = v;
+                }
+            }
+            "panel_inline_help_in_title" => {
+                if let Some(v) = value.as_bool() {
+                    self.panel_inline_help_in_title = v;
+                }
+            }
+            "panel_inline_help_delimiter" => {
+                if let Some(v) = value.as_str() {
+                    self.panel_inline_help_delimiter = v.to_string();
+                }
+            }
+            "options_table_column_types" => {
+                if let Some(v) = parse_string_list(value) {
+                    self.options_table_column_types = v;
+                }
+            }
+            "commands_table_column_types" => {
+                if let Some(v) = parse_string_list(value) {
+                    self.commands_table_column_types = v;
+                }
+            }
+            "options_table_help_sections" => {
+                if let Some(v) = parse_string_list(value) {
+                    self.options_table_help_sections = v;
+                }
+            }
+            "commands_table_help_sections" => {
+                if let Some(v) = parse_string_list(value) {
+                    self.commands_table_help_sections = v;
+                }
+            }
             "show_arguments" => self.show_arguments = value.as_bool(),
             "show_commands" => self.show_commands = value.as_bool(),
             "show_metavars_column" => self.show_metavars_column = value.as_bool(),
-            "commands_before_options" => if let Some(v) = value.as_bool() { self.commands_before_options = v; },
-            "default_panels_first" => if let Some(v) = value.as_bool() { self.default_panels_first = v; },
+            "commands_before_options" => {
+                if let Some(v) = value.as_bool() {
+                    self.commands_before_options = v;
+                }
+            }
+            "default_panels_first" => {
+                if let Some(v) = value.as_bool() {
+                    self.default_panels_first = v;
+                }
+            }
             "append_metavars_help" => self.append_metavars_help = value.as_bool(),
-            "group_arguments_options" => if let Some(v) = value.as_bool() { self.group_arguments_options = v; },
+            "group_arguments_options" => {
+                if let Some(v) = value.as_bool() {
+                    self.group_arguments_options = v;
+                }
+            }
             "option_envvar_first" => self.option_envvar_first = value.as_bool(),
-            "text_markup" => if let Some(v) = parse_text_markup(value) { self.text_markup = v; },
+            "text_markup" => {
+                if let Some(v) = parse_text_markup(value) {
+                    self.text_markup = v;
+                }
+            }
             "text_emojis" => self.text_emojis = value.as_bool(),
-            "text_paragraph_linebreaks" => if let Some(v) = value.as_str() { self.text_paragraph_linebreaks = Some(v.to_string()); },
-            "use_click_short_help" => if let Some(v) = value.as_bool() { self.use_click_short_help = v; },
-            "helptext_show_aliases" => if let Some(v) = value.as_bool() { self.helptext_show_aliases = v; },
-            "command_aliases" => if let Some(v) = parse_alias_map(value) { self.command_aliases = v; },
-            "option_groups" => if let Some(v) = parse_group_list(value, "options") { self.option_groups = v; },
-            "command_groups" => if let Some(v) = parse_group_list(value, "commands") { self.command_groups = v; },
-            "padding_header_text" => if let Some(v) = parse_padding_value(value) { self.padding_header_text = v; },
-            "padding_usage" => if let Some(v) = parse_padding_value(value) { self.padding_usage = v; },
-            "padding_helptext" => if let Some(v) = parse_padding_value(value) { self.padding_helptext = v; },
-            "padding_helptext_deprecated" => if let Some(v) = parse_padding_value(value) { self.padding_helptext_deprecated = v; },
-            "padding_helptext_first_line" => if let Some(v) = parse_padding_value(value) { self.padding_helptext_first_line = v; },
-            "padding_epilog" => if let Some(v) = parse_padding_value(value) { self.padding_epilog = v; },
-            "padding_footer_text" => if let Some(v) = parse_padding_value(value) { self.padding_footer_text = v; },
-            "padding_errors_panel" => if let Some(v) = parse_padding_value(value) { self.padding_errors_panel = v; },
-            "padding_errors_suggestion" => if let Some(v) = parse_padding_value(value) { self.padding_errors_suggestion = v; },
-            "padding_errors_epilogue" => if let Some(v) = parse_padding_value(value) { self.padding_errors_epilogue = v; },
+            "text_paragraph_linebreaks" => {
+                if let Some(v) = value.as_str() {
+                    self.text_paragraph_linebreaks = Some(v.to_string());
+                }
+            }
+            "use_click_short_help" => {
+                if let Some(v) = value.as_bool() {
+                    self.use_click_short_help = v;
+                }
+            }
+            "helptext_show_aliases" => {
+                if let Some(v) = value.as_bool() {
+                    self.helptext_show_aliases = v;
+                }
+            }
+            "command_aliases" => {
+                if let Some(v) = parse_alias_map(value) {
+                    self.command_aliases = v;
+                }
+            }
+            "option_groups" => {
+                if let Some(v) = parse_group_list(value, "options") {
+                    self.option_groups = v;
+                }
+            }
+            "command_groups" => {
+                if let Some(v) = parse_group_list(value, "commands") {
+                    self.command_groups = v;
+                }
+            }
+            "padding_header_text" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_header_text = v;
+                }
+            }
+            "padding_usage" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_usage = v;
+                }
+            }
+            "padding_helptext" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_helptext = v;
+                }
+            }
+            "padding_helptext_deprecated" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_helptext_deprecated = v;
+                }
+            }
+            "padding_helptext_first_line" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_helptext_first_line = v;
+                }
+            }
+            "padding_epilog" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_epilog = v;
+                }
+            }
+            "padding_footer_text" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_footer_text = v;
+                }
+            }
+            "padding_errors_panel" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_errors_panel = v;
+                }
+            }
+            "padding_errors_suggestion" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_errors_suggestion = v;
+                }
+            }
+            "padding_errors_epilogue" => {
+                if let Some(v) = parse_padding_value(value) {
+                    self.padding_errors_epilogue = v;
+                }
+            }
             _ => {}
         }
     }
@@ -832,16 +1280,29 @@ fn parse_group_list(value: &serde_json::Value, key: &str) -> Option<Vec<GroupCon
     let mut groups = Vec::new();
     for item in list {
         let obj = item.as_object()?;
-        let name = obj.get("name").and_then(|v| v.as_str()).unwrap_or("Group").to_string();
+        let name = obj
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Group")
+            .to_string();
         let items = obj
             .get(key)
             .and_then(parse_string_list)
             .or_else(|| obj.get("items").and_then(parse_string_list))
             .unwrap_or_default();
-        let help = obj.get("help").and_then(|v| v.as_str()).map(|v| v.to_string());
+        let help = obj
+            .get("help")
+            .and_then(|v| v.as_str())
+            .map(|v| v.to_string());
         let inline_help_in_title = obj.get("inline_help_in_title").and_then(|v| v.as_bool());
-        let title_style = obj.get("title_style").and_then(|v| v.as_str()).map(parse_style);
-        let help_style = obj.get("help_style").and_then(|v| v.as_str()).map(parse_style);
+        let title_style = obj
+            .get("title_style")
+            .and_then(|v| v.as_str())
+            .map(parse_style);
+        let help_style = obj
+            .get("help_style")
+            .and_then(|v| v.as_str())
+            .map(parse_style);
         groups.push(GroupConfig {
             name,
             items,
@@ -860,7 +1321,9 @@ fn parse_padding_value(value: &serde_json::Value) -> Option<PaddingDimensions> {
     }
     let list = value.as_array()?;
     match list.len() {
-        1 => list[0].as_u64().map(|v| PaddingDimensions::from(v as usize)),
+        1 => list[0]
+            .as_u64()
+            .map(|v| PaddingDimensions::from(v as usize)),
         2 => {
             let v0 = list[0].as_u64()?;
             let v1 = list[1].as_u64()?;
@@ -871,7 +1334,12 @@ fn parse_padding_value(value: &serde_json::Value) -> Option<PaddingDimensions> {
             let v1 = list[1].as_u64()?;
             let v2 = list[2].as_u64()?;
             let v3 = list[3].as_u64()?;
-            Some(PaddingDimensions::from((v0 as usize, v1 as usize, v2 as usize, v3 as usize)))
+            Some(PaddingDimensions::from((
+                v0 as usize,
+                v1 as usize,
+                v2 as usize,
+                v3 as usize,
+            )))
         }
         _ => None,
     }

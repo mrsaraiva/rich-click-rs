@@ -95,8 +95,6 @@ dependencies = [
 [[package]]
 name = "click-derive"
 version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c8580f42f6d7e640edb842f142bea1ee4d8095db7d94663e32e857649798cee"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -105,9 +103,7 @@ dependencies = [
 
 [[package]]
 name = "click-rs"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "068223c896aa23ab78621a3a0410f984b57aff97c50ed96f5237b3fe7293e379"
+version = "1.0.2"
 dependencies = [
  "chrono",
  "click-derive",
@@ -589,7 +585,7 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "rich-click-rs"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "click-rs",
  "rich-rs",

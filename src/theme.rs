@@ -317,7 +317,11 @@ fn apply_format_box(cfg: &mut RichHelpConfig) {
         "metavar".to_string(),
         "help".to_string(),
     ];
-    cfg.commands_table_column_types = vec!["name".to_string(), "aliases".to_string(), "help".to_string()];
+    cfg.commands_table_column_types = vec![
+        "name".to_string(),
+        "aliases".to_string(),
+        "help".to_string(),
+    ];
     cfg.options_table_help_sections = vec![
         "help".to_string(),
         "deprecated".to_string(),
@@ -380,7 +384,11 @@ fn apply_format_nu(cfg: &mut RichHelpConfig) {
         "opt_short".to_string(),
         "help".to_string(),
     ];
-    cfg.commands_table_column_types = vec!["name".to_string(), "aliases".to_string(), "help".to_string()];
+    cfg.commands_table_column_types = vec![
+        "name".to_string(),
+        "aliases".to_string(),
+        "help".to_string(),
+    ];
     cfg.options_table_help_sections = vec![
         "help".to_string(),
         "metavar".to_string(),
@@ -419,7 +427,11 @@ fn apply_format_slim(cfg: &mut RichHelpConfig) {
         "help".to_string(),
     ];
     cfg.commands_table_column_types = vec!["name_with_aliases".to_string(), "help".to_string()];
-    cfg.options_table_help_sections = vec!["help".to_string(), "default".to_string(), "envvar".to_string()];
+    cfg.options_table_help_sections = vec![
+        "help".to_string(),
+        "default".to_string(),
+        "envvar".to_string(),
+    ];
     cfg.commands_table_help_sections = vec!["help".to_string(), "deprecated".to_string()];
 }
 
@@ -447,7 +459,11 @@ fn apply_format_modern(cfg: &mut RichHelpConfig) {
         "metavar".to_string(),
         "help".to_string(),
     ];
-    cfg.commands_table_column_types = vec!["name".to_string(), "aliases".to_string(), "help".to_string()];
+    cfg.commands_table_column_types = vec![
+        "name".to_string(),
+        "aliases".to_string(),
+        "help".to_string(),
+    ];
     cfg.options_table_help_sections = vec![
         "required".to_string(),
         "help".to_string(),

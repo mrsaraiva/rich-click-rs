@@ -3,13 +3,17 @@ use std::sync::Arc;
 
 use click::argument::Argument;
 use click::command::Command;
-use click::context::{get_current_context, pop_context, push_context, Context, ContextBuilder};
+use click::context::{
+    get_current_context, pop_context, push_context, Context, ContextBuilder, HelpRenderer,
+};
 use click::error::ClickError;
 use click::group::{CommandLike, Group};
 use click::parameter::Parameter;
 use rich_rs::markdown::Markdown;
 use rich_rs::r#box::HORIZONTALS;
-use rich_rs::{Column, Console, ConsoleOptions, Padding, PaddingDimensions, Panel, Row, Style, Table, Text};
+use rich_rs::{
+    Column, Console, ConsoleOptions, Padding, PaddingDimensions, Panel, Row, Style, Table, Text,
+};
 
 use crate::config::{PanelConfig, RichHelpConfig, TableConfig, TextMarkup};
 
@@ -70,7 +74,11 @@ impl RichHelpRenderer {
             self.config.style_padding_usage,
         )?;
 
-        self.render_help_text(console, command.help.as_deref(), command.deprecated.as_deref())?;
+        self.render_help_text(
+            console,
+            command.help.as_deref(),
+            command.deprecated.as_deref(),
+        )?;
 
         if self.is_slim_theme() {
             let options = self.collect_options(command, ctx);
@@ -119,7 +127,14 @@ impl RichHelpRenderer {
         if let Some(epilog) = command.epilog.as_deref() {
             if !epilog.is_empty() {
                 console.print_text("")?;
-                console.print(&Text::styled(epilog, self.config.style_helptext), None, None, None, false, "\n")?;
+                console.print(
+                    &Text::styled(epilog, self.config.style_helptext),
+                    None,
+                    None,
+                    None,
+                    false,
+                    "\n",
+                )?;
             }
         }
 
@@ -141,7 +156,11 @@ impl RichHelpRenderer {
             self.config.style_padding_usage,
         )?;
 
-        self.render_help_text(console, group.command.help.as_deref(), group.command.deprecated.as_deref())?;
+        self.render_help_text(
+            console,
+            group.command.help.as_deref(),
+            group.command.deprecated.as_deref(),
+        )?;
 
         if self.is_slim_theme() {
             let commands = self.collect_commands(group);
@@ -179,16 +198,18 @@ impl RichHelpRenderer {
         let commands = self.collect_commands(group);
 
         let options = self.collect_options(&group.command, ctx);
-        let use_rule_options = self.use_rule_panels(&self.config.panel_options, &self.config.table_options);
-        let use_rule_commands = self.use_rule_panels(&self.config.panel_commands, &self.config.table_commands);
+        let use_rule_options =
+            self.use_rule_panels(&self.config.panel_options, &self.config.table_options);
+        let use_rule_commands =
+            self.use_rule_panels(&self.config.panel_commands, &self.config.table_commands);
 
         let show_args = self.config.show_arguments.unwrap_or(false);
         let has_arguments = show_args && group.command.arguments.iter().any(|arg| !arg.hidden());
 
         if self.config.commands_before_options {
             if !commands.is_empty() {
-            self.print_section_spacing(console, &mut sections_printed)?;
-            self.print_command_panels(console, &commands)?;
+                self.print_section_spacing(console, &mut sections_printed)?;
+                self.print_command_panels(console, &commands)?;
             }
         }
 
@@ -200,22 +221,32 @@ impl RichHelpRenderer {
         if !options.is_empty() {
             self.print_section_spacing(console, &mut sections_printed)?;
             self.print_option_panels(console, &options)?;
-            if !self.config.commands_before_options && !commands.is_empty() && (use_rule_options || use_rule_commands) {
+            if !self.config.commands_before_options
+                && !commands.is_empty()
+                && (use_rule_options || use_rule_commands)
+            {
                 self.print_slim_blank(console)?;
             }
         }
 
         if !self.config.commands_before_options {
             if !commands.is_empty() {
-            self.print_section_spacing(console, &mut sections_printed)?;
-            self.print_command_panels(console, &commands)?;
+                self.print_section_spacing(console, &mut sections_printed)?;
+                self.print_command_panels(console, &commands)?;
             }
         }
 
         if let Some(epilog) = group.command.epilog.as_deref() {
             if !epilog.is_empty() {
                 console.print_text("")?;
-                console.print(&Text::styled(epilog, self.config.style_helptext), None, None, None, false, "\n")?;
+                console.print(
+                    &Text::styled(epilog, self.config.style_helptext),
+                    None,
+                    None,
+                    None,
+                    false,
+                    "\n",
+                )?;
             }
         }
 
@@ -239,9 +270,7 @@ impl RichHelpRenderer {
                         decorated = format!(
                             "{} {}",
                             decorated,
-                            self.config
-                                .deprecated_with_reason_string
-                                .replace("{}", dep)
+                            self.config.deprecated_with_reason_string.replace("{}", dep)
                         );
                     }
                 }
@@ -274,9 +303,7 @@ impl RichHelpRenderer {
                 let dep_msg = if dep.is_empty() {
                     self.config.deprecated_string.clone()
                 } else {
-                    self.config
-                        .deprecated_with_reason_string
-                        .replace("{}", dep)
+                    self.config.deprecated_with_reason_string.replace("{}", dep)
                 };
                 let dep_text = Text::styled(&dep_msg, self.config.style_deprecated);
                 self.print_with_padding(
@@ -302,7 +329,9 @@ impl RichHelpRenderer {
         };
         if let Some(source) = self.param_source_for_error(error) {
             let suffix = if self.config.errors_param_source_format.contains("{}") {
-                self.config.errors_param_source_format.replace("{}", &source)
+                self.config
+                    .errors_param_source_format
+                    .replace("{}", &source)
             } else {
                 format!("{} {}", self.config.errors_param_source_format, source)
             };
@@ -327,7 +356,12 @@ impl RichHelpRenderer {
         console.print(&panel, None, None, None, false, "")?;
 
         if let Some(ref suggestion) = self.config.errors_suggestion {
-            let text = Text::styled(suggestion, self.config.style_errors_suggestion.unwrap_or(self.config.style_option_help));
+            let text = Text::styled(
+                suggestion,
+                self.config
+                    .style_errors_suggestion
+                    .unwrap_or(self.config.style_option_help),
+            );
             console.print(&text, None, None, None, false, "\n")?;
         }
         if let Some(ref epilogue) = self.config.errors_epilogue {
@@ -344,7 +378,11 @@ impl RichHelpRenderer {
         let ctx = get_current_context()?;
         let mut candidates: Vec<String> = Vec::new();
         match error {
-            ClickError::BadParameter { param_name, param_hint, .. } => {
+            ClickError::BadParameter {
+                param_name,
+                param_hint,
+                ..
+            } => {
                 if let Some(hints) = param_hint {
                     for hint in hints {
                         candidates.extend(collect_param_candidates(hint));
@@ -354,7 +392,11 @@ impl RichHelpRenderer {
                     candidates.extend(collect_param_candidates(name));
                 }
             }
-            ClickError::MissingParameter { param_name, param_hint, .. } => {
+            ClickError::MissingParameter {
+                param_name,
+                param_hint,
+                ..
+            } => {
                 if let Some(hints) = param_hint {
                     for hint in hints {
                         candidates.extend(collect_param_candidates(hint));
@@ -405,7 +447,8 @@ impl RichHelpRenderer {
                 panel_cfg.padding = PaddingDimensions::from((1, right, bottom, left));
             }
         }
-        let mut rule_panels: Vec<(String, Table, Option<String>, Style, Option<Style>, bool)> = Vec::new();
+        let mut rule_panels: Vec<(String, Table, Option<String>, Style, Option<Style>, bool)> =
+            Vec::new();
         let use_rule = self.use_rule_panels(&self.config.panel_options, &self.config.table_options);
 
         if !self.config.option_groups.is_empty() {
@@ -417,10 +460,17 @@ impl RichHelpRenderer {
                 }
                 let rows = self.build_option_rows(&group_items);
                 let flex_last = self.should_flex_last_options(&group_items);
-                let table = self.build_table_from_rows(rows, &self.config.table_options, None, flex_last);
-                let title_style = group.title_style.unwrap_or(self.config.panel_options.title_style);
-                let help_style = group.help_style.unwrap_or(self.config.style_options_panel_help_style);
-                let inline = group.inline_help_in_title.unwrap_or(self.config.panel_inline_help_in_title);
+                let table =
+                    self.build_table_from_rows(rows, &self.config.table_options, None, flex_last);
+                let title_style = group
+                    .title_style
+                    .unwrap_or(self.config.panel_options.title_style);
+                let help_style = group
+                    .help_style
+                    .unwrap_or(self.config.style_options_panel_help_style);
+                let inline = group
+                    .inline_help_in_title
+                    .unwrap_or(self.config.panel_inline_help_in_title);
                 if use_rule {
                     rule_panels.push((
                         group.name.clone(),
@@ -448,7 +498,8 @@ impl RichHelpRenderer {
         if !remaining.is_empty() {
             let rows = self.build_option_rows(&remaining);
             let flex_last = self.should_flex_last_options(&remaining);
-            let table = self.build_table_from_rows(rows, &self.config.table_options, None, flex_last);
+            let table =
+                self.build_table_from_rows(rows, &self.config.table_options, None, flex_last);
             if use_rule {
                 rule_panels.push((
                     self.config.options_panel_title.clone(),
@@ -510,8 +561,10 @@ impl RichHelpRenderer {
     ) -> io::Result<()> {
         let mut remaining = commands.to_vec();
         let mut panels = Vec::new();
-        let mut rule_panels: Vec<(String, Table, Option<String>, Style, Option<Style>, bool)> = Vec::new();
-        let use_rule = self.use_rule_panels(&self.config.panel_commands, &self.config.table_commands);
+        let mut rule_panels: Vec<(String, Table, Option<String>, Style, Option<Style>, bool)> =
+            Vec::new();
+        let use_rule =
+            self.use_rule_panels(&self.config.panel_commands, &self.config.table_commands);
 
         if !self.config.command_groups.is_empty() {
             for group in &self.config.command_groups {
@@ -523,7 +576,11 @@ impl RichHelpRenderer {
                 let rows = self.build_command_rows(&group_items);
                 let mut table_cfg = self.config.table_commands.clone();
                 if use_rule {
-                    let max_name_len = group_items.iter().map(|entry| entry.name.len()).max().unwrap_or(0);
+                    let max_name_len = group_items
+                        .iter()
+                        .map(|entry| entry.name.len())
+                        .max()
+                        .unwrap_or(0);
                     if max_name_len <= 6 {
                         table_cfg.padding = (table_cfg.padding.0, 1);
                     }
@@ -534,9 +591,15 @@ impl RichHelpRenderer {
                     self.config.style_commands_table_column_width_ratio,
                     false,
                 );
-                let title_style = group.title_style.unwrap_or(self.config.panel_commands.title_style);
-                let help_style = group.help_style.unwrap_or(self.config.style_commands_panel_help_style);
-                let inline = group.inline_help_in_title.unwrap_or(self.config.panel_inline_help_in_title);
+                let title_style = group
+                    .title_style
+                    .unwrap_or(self.config.panel_commands.title_style);
+                let help_style = group
+                    .help_style
+                    .unwrap_or(self.config.style_commands_panel_help_style);
+                let inline = group
+                    .inline_help_in_title
+                    .unwrap_or(self.config.panel_inline_help_in_title);
                 if use_rule {
                     rule_panels.push((
                         group.name.clone(),
@@ -565,7 +628,11 @@ impl RichHelpRenderer {
             let rows = self.build_command_rows(&remaining);
             let mut table_cfg = self.config.table_commands.clone();
             if use_rule {
-                let max_name_len = remaining.iter().map(|entry| entry.name.len()).max().unwrap_or(0);
+                let max_name_len = remaining
+                    .iter()
+                    .map(|entry| entry.name.len())
+                    .max()
+                    .unwrap_or(0);
                 if max_name_len <= 6 {
                     table_cfg.padding = (table_cfg.padding.0, 1);
                 }
@@ -669,13 +736,13 @@ impl RichHelpRenderer {
         } else {
             Table::grid()
         }
-            .with_padding(table_cfg.padding.0, table_cfg.padding.1)
-            .with_collapse_padding(table_cfg.collapse_padding)
-            .with_pad_edge(table_cfg.pad_edge)
-            .with_show_lines(table_cfg.show_lines)
-            .with_leading(table_cfg.leading)
-            .with_expand(table_cfg.expand)
-            .with_border_style(table_cfg.border_style);
+        .with_padding(table_cfg.padding.0, table_cfg.padding.1)
+        .with_collapse_padding(table_cfg.collapse_padding)
+        .with_pad_edge(table_cfg.pad_edge)
+        .with_show_lines(table_cfg.show_lines)
+        .with_leading(table_cfg.leading)
+        .with_expand(table_cfg.expand)
+        .with_border_style(table_cfg.border_style);
 
         if let Some(box_type) = table_cfg.box_type {
             table = table.with_box(Some(box_type));
@@ -723,7 +790,8 @@ impl RichHelpRenderer {
         inline_help: bool,
     ) -> Panel {
         let title_style = title_override.unwrap_or(panel_cfg.title_style);
-        let title_text = self.build_panel_title(title, title_style, help_text, help_style, inline_help);
+        let title_text =
+            self.build_panel_title(title, title_style, help_text, help_style, inline_help);
         Panel::new(Box::new(table))
             .with_box(panel_cfg.box_type)
             .with_title_text(title_text)
@@ -746,7 +814,8 @@ impl RichHelpRenderer {
         inline_help: bool,
     ) -> io::Result<()> {
         let title_style = title_override.unwrap_or(panel_cfg.title_style);
-        let title_text = self.build_panel_title(title, title_style, help_text, help_style, inline_help);
+        let title_text =
+            self.build_panel_title(title, title_style, help_text, help_style, inline_help);
         let (_top, right, _bottom, left) = self.config.padding_helptext.unpack();
         let width = self.line_width();
         let left_pad = " ".repeat(left);
@@ -776,7 +845,10 @@ impl RichHelpRenderer {
         if let Some(max_width) = self.config.max_width {
             options.max_width = max_width;
         }
-        options.color_system = self.config.color_system.to_color_system(options.color_system);
+        options.color_system = self
+            .config
+            .color_system
+            .to_color_system(options.color_system);
         if let Some(force_terminal) = self.config.force_terminal {
             options.is_terminal = force_terminal;
             if !force_terminal {
@@ -826,7 +898,13 @@ impl RichHelpRenderer {
         }
     }
 
-    fn apply_help_styles(&self, rendered: &mut Text, raw: &str, has_deprecated: bool, style_base: bool) {
+    fn apply_help_styles(
+        &self,
+        rendered: &mut Text,
+        raw: &str,
+        has_deprecated: bool,
+        style_base: bool,
+    ) {
         let first_end = raw.find('\n').unwrap_or(raw.len());
         if style_base {
             if first_end < raw.len() {
@@ -979,7 +1057,10 @@ impl RichHelpRenderer {
         if inline_help {
             if let Some(help_text) = help {
                 let mut text = Text::styled(padded, style);
-                text.append(&self.config.panel_inline_help_delimiter, Some(self.config.style_option_help));
+                text.append(
+                    &self.config.panel_inline_help_delimiter,
+                    Some(self.config.style_option_help),
+                );
                 text.append(help_text, Some(help_style));
                 return text;
             }
@@ -1033,11 +1114,16 @@ impl RichHelpRenderer {
                     let raw = if let Some(cmd) = cmd.as_any().downcast_ref::<Command>() {
                         cmd.short_help.as_deref().or(cmd.help.as_deref())
                     } else if let Some(group) = cmd.as_any().downcast_ref::<Group>() {
-                        group.command.short_help.as_deref().or(group.command.help.as_deref())
+                        group
+                            .command
+                            .short_help
+                            .as_deref()
+                            .or(group.command.help.as_deref())
                     } else {
                         None
                     };
-                    raw.map(|v| self.normalize_first_paragraph(v)).unwrap_or_default()
+                    raw.map(|v| self.normalize_first_paragraph(v))
+                        .unwrap_or_default()
                 };
                 if self.config.helptext_show_aliases && !aliases.is_empty() {
                     let joined = aliases.join(&self.config.delimiter_comma);
@@ -1068,10 +1154,13 @@ impl RichHelpRenderer {
         if self.config.show_metavars_column == Some(false) {
             column_types.retain(|c| !c.contains("metavar"));
         }
-        if column_types.iter().any(|c| c == "required") && !options.iter().any(|opt| opt.required()) {
+        if column_types.iter().any(|c| c == "required") && !options.iter().any(|opt| opt.required())
+        {
             column_types.retain(|c| c != "required");
         }
-        if column_types.iter().any(|c| c == "opt_short") && !options.iter().any(|opt| !opt.short.is_empty()) {
+        if column_types.iter().any(|c| c == "opt_short")
+            && !options.iter().any(|opt| !opt.short.is_empty())
+        {
             column_types.retain(|c| c != "opt_short");
         }
         if column_types.iter().any(|c| c == "metavar")
@@ -1087,7 +1176,9 @@ impl RichHelpRenderer {
                 if let Some(renderable) = cell {
                     row.push(renderable);
                 } else {
-                    row.push(Box::new(Text::plain("")) as Box<dyn rich_rs::Renderable + Send + Sync>);
+                    row.push(
+                        Box::new(Text::plain("")) as Box<dyn rich_rs::Renderable + Send + Sync>
+                    );
                 }
             }
             rows.push(row);
@@ -1106,7 +1197,10 @@ impl RichHelpRenderer {
                 continue;
             }
             let required = if arg.required() {
-                Text::styled(&self.config.required_short_string, self.config.style_required_short)
+                Text::styled(
+                    &self.config.required_short_string,
+                    self.config.style_required_short,
+                )
             } else {
                 Text::plain("")
             };
@@ -1130,7 +1224,10 @@ impl RichHelpRenderer {
                 if !help_text.plain_text().is_empty() {
                     help_text.append(" ", Some(self.config.style_option_help));
                 }
-                help_text.append(self.config.required_long_string.clone(), Some(self.config.style_required_long));
+                help_text.append(
+                    self.config.required_long_string.clone(),
+                    Some(self.config.style_required_long),
+                );
             }
             let row = vec![
                 Box::new(required) as Box<dyn rich_rs::Renderable + Send + Sync>,
@@ -1149,7 +1246,9 @@ impl RichHelpRenderer {
     ) -> Vec<Vec<Box<dyn rich_rs::Renderable + Send + Sync>>> {
         let mut rows = Vec::new();
         let mut column_types = self.config.commands_table_column_types.clone();
-        if column_types.iter().any(|c| c == "aliases") && commands.iter().all(|entry| entry.aliases.is_empty()) {
+        if column_types.iter().any(|c| c == "aliases")
+            && commands.iter().all(|entry| entry.aliases.is_empty())
+        {
             column_types.retain(|c| c != "aliases");
         }
 
@@ -1164,13 +1263,18 @@ impl RichHelpRenderer {
             for col in &column_types {
                 let cell: Box<dyn rich_rs::Renderable + Send + Sync> = match col.as_str() {
                     "name" => Box::new(Text::styled(&entry.name, self.config.style_command)),
-                    "aliases" => Box::new(Text::styled(&alias_str, self.config.style_command_aliases)),
+                    "aliases" => {
+                        Box::new(Text::styled(&alias_str, self.config.style_command_aliases))
+                    }
                     "name_with_aliases" => {
                         if alias_str.is_empty() {
                             Box::new(Text::styled(&entry.name, self.config.style_command))
                         } else {
                             let mut t = Text::styled(&entry.name, self.config.style_command);
-                            t.append(&self.config.delimiter_slash, Some(self.config.style_option_help));
+                            t.append(
+                                &self.config.delimiter_slash,
+                                Some(self.config.style_option_help),
+                            );
                             t.append(&alias_str, Some(self.config.style_command_aliases));
                             Box::new(t)
                         }
@@ -1207,16 +1311,17 @@ impl RichHelpRenderer {
                 if opt.is_bool_flag && opt.short.len() == 2 {
                     let mut text = Text::styled("", self.config.style_switch);
                     text.append(&opt.short[0], Some(self.config.style_switch));
-                    text.append(&self.config.delimiter_slash, Some(self.config.style_option_help));
+                    text.append(
+                        &self.config.delimiter_slash,
+                        Some(self.config.style_option_help),
+                    );
                     text.append(&opt.short[1], Some(self.config.style_switch));
                     Some(Box::new(text))
                 } else {
                     self.build_option_list(&opt.short, self.config.style_switch)
                 }
             }
-            "opt_all" => {
-                Some(Box::new(self.build_option_all_text(opt)) as Box<_>)
-            }
+            "opt_all" => Some(Box::new(self.build_option_all_text(opt)) as Box<_>),
             "opt_long_metavar" => self.build_option_with_metavar(&opt.long, opt),
             "opt_all_metavar" => {
                 let mut text = self.build_option_all_text(opt);
@@ -1226,10 +1331,9 @@ impl RichHelpRenderer {
                 }
                 Some(Box::new(text))
             }
-            "metavar" | "metavar_short" => {
-                self.option_metavar_display(opt)
-                    .map(|mv| Box::new(Text::styled(mv, self.config.style_metavar)) as Box<_>)
-            }
+            "metavar" | "metavar_short" => self
+                .option_metavar_display(opt)
+                .map(|mv| Box::new(Text::styled(mv, self.config.style_metavar)) as Box<_>),
             "help" => {
                 if self.config.text_markup == TextMarkup::Markdown {
                     let markdown = self.build_option_help_markdown(opt);
@@ -1253,7 +1357,10 @@ impl RichHelpRenderer {
         let mut text = Text::styled("", style);
         for (idx, item) in items.iter().enumerate() {
             if idx > 0 {
-                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+                text.append(
+                    &self.config.delimiter_comma,
+                    Some(self.config.style_option_help),
+                );
             }
             text.append(item, Some(style));
         }
@@ -1270,7 +1377,10 @@ impl RichHelpRenderer {
         if opt.is_bool_flag && opt.long.len() == 2 {
             let mut text = Text::styled("", self.config.style_option);
             text.append(&opt.long[0], Some(self.config.style_option));
-            text.append(&self.config.delimiter_slash, Some(self.config.style_option_help));
+            text.append(
+                &self.config.delimiter_slash,
+                Some(self.config.style_option_help),
+            );
             text.append(&opt.long[1], Some(self.config.style_option));
             return Some(Box::new(text));
         }
@@ -1306,14 +1416,20 @@ impl RichHelpRenderer {
         let mut first = true;
         for item in &opt.short {
             if !first {
-                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+                text.append(
+                    &self.config.delimiter_comma,
+                    Some(self.config.style_option_help),
+                );
             }
             text.append(item, Some(self.config.style_switch));
             first = false;
         }
         for item in &opt.long {
             if !first {
-                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+                text.append(
+                    &self.config.delimiter_comma,
+                    Some(self.config.style_option_help),
+                );
             }
             text.append(item, Some(self.config.style_option));
             first = false;
@@ -1332,7 +1448,10 @@ impl RichHelpRenderer {
         let mut text = Text::styled("", self.config.style_option);
         for (idx, item) in items.iter().enumerate() {
             if idx > 0 {
-                text.append(&self.config.delimiter_comma, Some(self.config.style_option_help));
+                text.append(
+                    &self.config.delimiter_comma,
+                    Some(self.config.style_option_help),
+                );
             }
             text.append(item, Some(self.config.style_option));
         }
@@ -1356,8 +1475,11 @@ impl RichHelpRenderer {
                 "help" => opt.help().map(|v| self.normalize_help_text(v)),
                 "envvar" => {
                     if opt.show_envvar {
-                        opt.envvar()
-                            .map(|vars| self.config.envvar_string.replace("{}", &vars.join(&self.config.delimiter_comma)))
+                        opt.envvar().map(|vars| {
+                            self.config
+                                .envvar_string
+                                .replace("{}", &vars.join(&self.config.delimiter_comma))
+                        })
                     } else {
                         None
                     }
@@ -1367,7 +1489,9 @@ impl RichHelpRenderer {
                         let default_value = if opt.is_bool_flag {
                             match opt.default.as_deref() {
                                 Some("false") => {
-                                    if let Some(no_opt) = opt.long.iter().find(|l| l.starts_with("--no-")) {
+                                    if let Some(no_opt) =
+                                        opt.long.iter().find(|l| l.starts_with("--no-"))
+                                    {
                                         Some(no_opt.trim_start_matches('-').to_string())
                                     } else if opt.long.len() > 1 {
                                         Some(opt.long[1].trim_start_matches('-').to_string())
@@ -1376,7 +1500,9 @@ impl RichHelpRenderer {
                                     }
                                 }
                                 Some("true") => {
-                                    if let Some(yes_opt) = opt.long.iter().find(|l| !l.starts_with("--no-")) {
+                                    if let Some(yes_opt) =
+                                        opt.long.iter().find(|l| !l.starts_with("--no-"))
+                                    {
                                         Some(yes_opt.trim_start_matches('-').to_string())
                                     } else {
                                         opt.default.clone()
@@ -1417,7 +1543,11 @@ impl RichHelpRenderer {
                     let emojis = self.config.text_emojis.unwrap_or(true);
                     let mut rendered =
                         Text::from_markup(&piece, emojis).unwrap_or_else(|_| Text::plain(&piece));
-                    rendered.stylize(0, rendered.plain_text().len(), self.config.style_option_help);
+                    rendered.stylize(
+                        0,
+                        rendered.plain_text().len(),
+                        self.config.style_option_help,
+                    );
                     text.append_text(&rendered);
                 } else if section == "help" && self.config.text_markup == TextMarkup::Ansi {
                     let rendered = Text::from_ansi(&piece);
@@ -1469,8 +1599,11 @@ impl RichHelpRenderer {
                 "help" => opt.help().map(|v| self.normalize_help_text(v)),
                 "envvar" => {
                     if opt.show_envvar {
-                        opt.envvar()
-                            .map(|vars| self.config.envvar_string.replace("{}", &vars.join(&self.config.delimiter_comma)))
+                        opt.envvar().map(|vars| {
+                            self.config
+                                .envvar_string
+                                .replace("{}", &vars.join(&self.config.delimiter_comma))
+                        })
                     } else {
                         None
                     }
@@ -1480,7 +1613,9 @@ impl RichHelpRenderer {
                         let default_value = if opt.is_bool_flag {
                             match opt.default.as_deref() {
                                 Some("false") => {
-                                    if let Some(no_opt) = opt.long.iter().find(|l| l.starts_with("--no-")) {
+                                    if let Some(no_opt) =
+                                        opt.long.iter().find(|l| l.starts_with("--no-"))
+                                    {
                                         Some(no_opt.trim_start_matches('-').to_string())
                                     } else if opt.long.len() > 1 {
                                         Some(opt.long[1].trim_start_matches('-').to_string())
@@ -1489,7 +1624,9 @@ impl RichHelpRenderer {
                                     }
                                 }
                                 Some("true") => {
-                                    if let Some(yes_opt) = opt.long.iter().find(|l| !l.starts_with("--no-")) {
+                                    if let Some(yes_opt) =
+                                        opt.long.iter().find(|l| !l.starts_with("--no-"))
+                                    {
                                         Some(yes_opt.trim_start_matches('-').to_string())
                                     } else {
                                         opt.default.clone()
@@ -1665,10 +1802,7 @@ impl RichHelpRenderer {
     }
 
     fn line_width(&self) -> usize {
-        self.config
-            .width
-            .or(self.config.max_width)
-            .unwrap_or(80)
+        self.config.width.or(self.config.max_width).unwrap_or(80)
     }
 
     fn pad_line(&self, line: &str, width: usize) -> String {
@@ -1703,7 +1837,10 @@ impl RichHelpRenderer {
         &self,
         options: &[click::option::ClickOption],
         names: &[String],
-    ) -> (Vec<click::option::ClickOption>, Vec<click::option::ClickOption>) {
+    ) -> (
+        Vec<click::option::ClickOption>,
+        Vec<click::option::ClickOption>,
+    ) {
         let mut selected = Vec::new();
         let mut remaining: Vec<click::option::ClickOption> = options.to_vec();
 
@@ -1853,8 +1990,57 @@ pub fn main_rich_command_with_errors(
     }
 }
 
+/// Build a `HelpRenderer` that dispatches to the rich renderer by downcasting
+/// the `&dyn CommandLike` to `&Group` or `&Command`.
+///
+/// This is installed into the root context by [`make_rich_group_context`] so that
+/// `Group::invoke` will call it for any subcommand's `--help` (i.e. `Exit{0}`
+/// from `make_context`), producing rich-formatted output instead of the plain
+/// `cmd.get_help()` fallback.
+fn build_rich_help_renderer(config: RichHelpConfig) -> HelpRenderer {
+    Arc::new(move |cmd: &dyn CommandLike, ctx: &Context| {
+        let rich = RichHelpRenderer::new(config.clone());
+        if let Some(group) = cmd.as_any().downcast_ref::<Group>() {
+            rich.render_group_help(group, ctx)
+        } else if let Some(command) = cmd.as_any().downcast_ref::<Command>() {
+            rich.render_command_help(command, ctx)
+        } else {
+            // Fallback: use the CommandLike's own plain help
+            cmd.get_help(ctx)
+        }
+    })
+}
+
+/// Build the root context for a `Group`, mirroring `Group::make_context` but
+/// also installing the rich help renderer so subcommand `--help` requests are
+/// rendered richly.
+///
+/// Returns `Err(Exit{0})` if the group's own `--help` is triggered (caller
+/// handles that by printing rich group help directly).
+fn make_rich_group_context(
+    group: &Group,
+    prog_name: &str,
+    args: Vec<String>,
+    renderer: HelpRenderer,
+) -> Result<Context, ClickError> {
+    let builder = ContextBuilder::new()
+        .info_name(prog_name)
+        .allow_extra_args(true)
+        .allow_interspersed_args(false)
+        .help_renderer(renderer);
+
+    // Groups do not have a parent at root level.
+    let mut ctx = builder.build();
+    group.command.parse_args(&mut ctx, args)?;
+    Ok(ctx)
+}
+
 /// Run a group with rich help output when --help is requested.
-pub fn main_rich_group(group: &Group, args: Vec<String>, config: &RichHelpConfig) -> Result<(), ClickError> {
+pub fn main_rich_group(
+    group: &Group,
+    args: Vec<String>,
+    config: &RichHelpConfig,
+) -> Result<(), ClickError> {
     let prog_name = CommandLike::name(group)
         .map(|s| s.to_string())
         .unwrap_or_else(|| {
@@ -1864,7 +2050,8 @@ pub fn main_rich_group(group: &Group, args: Vec<String>, config: &RichHelpConfig
         });
 
     let args_for_eager = args.clone();
-    let ctx_result = group.make_context(&prog_name, args, None);
+    let renderer = build_rich_help_renderer(config.clone());
+    let ctx_result = make_rich_group_context(group, &prog_name, args, renderer);
 
     match ctx_result {
         Ok(ctx) => {
@@ -1876,7 +2063,9 @@ pub fn main_rich_group(group: &Group, args: Vec<String>, config: &RichHelpConfig
             result
         }
         Err(ClickError::Exit { code: 0 }) => {
-            if let Some(version_output) = get_version_output_from_args(&group.command, &args_for_eager) {
+            if let Some(version_output) =
+                get_version_output_from_args(&group.command, &args_for_eager)
+            {
                 println!("{}", version_output);
                 return Ok(());
             }
@@ -1904,7 +2093,8 @@ pub fn main_rich_group_with_errors(
         });
 
     let args_for_eager = args.clone();
-    let ctx_result = group.make_context(&prog_name, args, None);
+    let renderer = build_rich_help_renderer(config.clone());
+    let ctx_result = make_rich_group_context(group, &prog_name, args, renderer);
 
     match ctx_result {
         Ok(ctx) => {
@@ -1920,7 +2110,9 @@ pub fn main_rich_group_with_errors(
             result
         }
         Err(ClickError::Exit { code: 0 }) => {
-            if let Some(version_output) = get_version_output_from_args(&group.command, &args_for_eager) {
+            if let Some(version_output) =
+                get_version_output_from_args(&group.command, &args_for_eager)
+            {
                 println!("{}", version_output);
                 return Ok(());
             }
@@ -1954,7 +2146,10 @@ fn arg_matches_opt(arg: &str, opt: &str) -> bool {
     if arg == opt {
         return true;
     }
-    if opt.starts_with("--") && arg.starts_with(opt) && arg.get(opt.len()..opt.len() + 1) == Some("=") {
+    if opt.starts_with("--")
+        && arg.starts_with(opt)
+        && arg.get(opt.len()..opt.len() + 1) == Some("=")
+    {
         return true;
     }
     if opt.starts_with('-') && opt.len() == 2 && !opt.starts_with("--") {

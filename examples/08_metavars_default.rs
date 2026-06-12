@@ -60,7 +60,9 @@ specific group subcommands.",
         .callback(|_ctx| Ok(()))
         .build();
 
-    let ctx = ContextBuilder::new().info_name("08_metavars_default").build();
+    let ctx = ContextBuilder::new()
+        .info_name("08_metavars_default")
+        .build();
     let cfg = RichHelpConfig::default();
     println!("{}", cli.get_rich_help_with(&ctx, &cfg));
 }

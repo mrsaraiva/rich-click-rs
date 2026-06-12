@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-12
+
+### Added
+- Rich help rendering now applies to SUBCOMMAND `--help`, not only the root:
+  `main_rich_group` / `main_rich_group_with_errors` install a rich
+  `HelpRenderer` into the context chain via the new click-rs 1.0.2 hook
+  (`build_rich_help_renderer`, `make_rich_group_context`). Command-group
+  panels (`RichHelpConfig::command_groups`) are therefore reachable from
+  every help path.
+
+### Changed
+- click-rs dependency raised to 1.0.2 (required for the help-renderer hook).
+
 ### Added
 - Optional prompt metadata in option help output (`show_prompt`, prompt label strings).
 - Optional parameter source suffix for error output (`errors_show_param_source`, format string).

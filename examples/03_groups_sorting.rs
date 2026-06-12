@@ -3,7 +3,7 @@ use click::context::ContextBuilder;
 use click::group::Group;
 use click::option::OptionBuilder;
 use click::types::PathType;
-use rich_click_rs::{RichHelp, GroupConfig, RichHelpConfig};
+use rich_click_rs::{GroupConfig, RichHelp, RichHelpConfig};
 
 fn main() {
     let sync = Command::new("sync")
@@ -21,7 +21,12 @@ fn main() {
                 .type_any(PathType::new())
                 .build(),
         )
-        .option(OptionBuilder::new(&["--all"]).flag("true").help("Sync all the things?").build())
+        .option(
+            OptionBuilder::new(&["--all"])
+                .flag("true")
+                .help("Sync all the things?")
+                .build(),
+        )
         .option(
             OptionBuilder::new(&["--overwrite"])
                 .flag("true")
@@ -36,7 +41,12 @@ fn main() {
 
     let download = Command::new("download")
         .help("Pretend to download some files from somewhere.")
-        .option(OptionBuilder::new(&["--all"]).flag("true").help("Get everything").build())
+        .option(
+            OptionBuilder::new(&["--all"])
+                .flag("true")
+                .help("Get everything")
+                .build(),
+        )
         .callback(|_ctx| {
             println!("Downloading");
             Ok(())
@@ -119,7 +129,11 @@ specific subcommands.",
         },
         GroupConfig {
             name: "Advanced options".to_string(),
-            items: vec!["--help".to_string(), "--version".to_string(), "--debug".to_string()],
+            items: vec![
+                "--help".to_string(),
+                "--version".to_string(),
+                "--debug".to_string(),
+            ],
             help: None,
             inline_help_in_title: None,
             title_style: None,

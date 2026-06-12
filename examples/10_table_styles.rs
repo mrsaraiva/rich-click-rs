@@ -64,7 +64,12 @@ Curabitur at ultrices quam, vel molestie justo.\n\
 Nunc lobortis orci vel nibh sagittis pretium.\n\
 Morbi rhoncus sapien luctus, ultrices urna vel, convallis tortor.",
         )
-        .option(OptionBuilder::new(&["--all"]).flag("true").help("Get everything").build())
+        .option(
+            OptionBuilder::new(&["--all"])
+                .flag("true")
+                .help("Get everything")
+                .build(),
+        )
         .callback(|_ctx| {
             println!("Downloading");
             Ok(())

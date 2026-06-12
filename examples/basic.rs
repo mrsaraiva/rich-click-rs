@@ -5,7 +5,7 @@ fn main() {
     let cmd = Command::new("demo")
         .help("A demo CLI")
         .option(
-            OptionBuilder::new(&["-v", "--verbose"]) 
+            OptionBuilder::new(&["-v", "--verbose"])
                 .help("Enable verbose output")
                 .build(),
         )

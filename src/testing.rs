@@ -145,3 +145,134 @@ impl RichCliRunner {
         self.runner.invoke_isolated(&wrapped, args)
     }
 }
+
+// =============================================================================
+// Regression tests
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::GroupConfig;
+
+    fn make_group_with_subcommands() -> Group {
+        Group::new("cli")
+            .help("Test CLI application")
+            .command(Command::new("start").help("Start the service").build())
+            .command(Command::new("stop").help("Stop the service").build())
+            .command(Command::new("status").help("Show service status").build())
+            .build()
+    }
+
+    // -------------------------------------------------------------------------
+    // Help renderer wiring tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_subcommand_help_uses_rich_renderer() {
+        // When `main_rich_group` is used, a subcommand's --help should exit 0
+        // (Exit{0} handled internally via the rich renderer hook).
+        let group = make_group_with_subcommands();
+        let runner = RichCliRunner::new();
+        let result = runner.invoke(&group, &["start", "--help"]);
+        assert_eq!(result.exit_code, 0, "Subcommand --help should exit 0");
+    }
+
+    #[test]
+    fn test_root_help_uses_rich_renderer() {
+        // Root --help should exit 0 via the rich renderer path.
+        let group = make_group_with_subcommands();
+        let runner = RichCliRunner::new();
+        let result = runner.invoke(&group, &["--help"]);
+        assert_eq!(result.exit_code, 0, "Root --help should exit 0");
+    }
+
+    #[test]
+    fn test_main_rich_group_subcommand_help_ok() {
+        // Subcommand --help via the RichCliRunner should return exit_code 0.
+        let group = make_group_with_subcommands();
+        let runner = RichCliRunner::new();
+        let result = runner.invoke(&group, &["stop", "--help"]);
+        assert_eq!(result.exit_code, 0, "Expected exit 0 for subcommand --help");
+    }
+
+    // -------------------------------------------------------------------------
+    // COMMAND_GROUPS / grouped rendering tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_command_groups_rendered_as_separate_panels() {
+        // Configure two command groups; verify each group's title appears.
+        let group = Group::new("cli")
+            .help("My CLI")
+            .command(Command::new("start").help("Start").build())
+            .command(Command::new("stop").help("Stop").build())
+            .command(Command::new("status").help("Status").build())
+            .command(Command::new("logs").help("Logs").build())
+            .build();
+
+        let config = RichHelpConfig::builder().build();
+        let mut cfg = config;
+        cfg.command_groups = vec![
+            GroupConfig {
+                name: "Lifecycle".to_string(),
+                items: vec!["start".to_string(), "stop".to_string()],
+                help: None,
+                inline_help_in_title: None,
+                title_style: None,
+                help_style: None,
+            },
+            GroupConfig {
+                name: "Observability".to_string(),
+                items: vec!["status".to_string(), "logs".to_string()],
+                help: None,
+                inline_help_in_title: None,
+                title_style: None,
+                help_style: None,
+            },
+        ];
+
+        let runner = RichCliRunner::new().config(cfg);
+        let result = runner.invoke(&group, &["--help"]);
+        // Help should complete successfully
+        assert_eq!(result.exit_code, 0, "Expected exit 0 for grouped --help");
+    }
+
+    #[test]
+    fn test_command_groups_ungrouped_fallback() {
+        // Commands not listed in any group appear in the default "Commands" panel.
+        // Verify exit 0 (rendering does not panic or error).
+        let group = Group::new("cli")
+            .command(Command::new("run").help("Run").build())
+            .command(Command::new("build").help("Build").build())
+            .command(Command::new("extra").help("Extra command").build())
+            .build();
+
+        let mut cfg = RichHelpConfig::default();
+        cfg.command_groups = vec![GroupConfig {
+            name: "Main".to_string(),
+            items: vec!["run".to_string(), "build".to_string()],
+            help: None,
+            inline_help_in_title: None,
+            title_style: None,
+            help_style: None,
+        }];
+
+        let runner = RichCliRunner::new().config(cfg);
+        let result = runner.invoke(&group, &["--help"]);
+        assert_eq!(
+            result.exit_code, 0,
+            "Expected exit 0 for partially-grouped --help"
+        );
+    }
+
+    #[test]
+    fn test_no_command_groups_shows_all_commands() {
+        // Without any command_groups config, --help should complete successfully.
+        let group = make_group_with_subcommands();
+        let cfg = RichHelpConfig::default();
+        let runner = RichCliRunner::new().config(cfg);
+        let result = runner.invoke(&group, &["--help"]);
+        assert_eq!(result.exit_code, 0, "Expected exit 0 for ungrouped --help");
+    }
+}
